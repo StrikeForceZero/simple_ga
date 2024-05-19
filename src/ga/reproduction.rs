@@ -44,7 +44,7 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
         if !coin_flip(&mut rng, options.overall_reproduction_chance) {
             continue;
         }
-        let (subject_a, subject_b) = (&subject_a.subject, &subject_b.subject);
+        let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
         for (reproduction_fn, odds) in options.reproduction_chance_tuples.iter() {
             if !coin_flip(&mut rng, *odds) {
                 continue;

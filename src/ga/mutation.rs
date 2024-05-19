@@ -30,7 +30,7 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
             if !coin_flip(&mut rng, *odds) {
                 continue;
             }
-            let subject = &wrapped_subject.subject;
+            let subject = &wrapped_subject.subject();
             let mutated_subject = mutator.apply(subject);
             let fitness = Mutator::fitness(&mutated_subject);
             let fw = FitnessWrapped::new(mutated_subject, fitness);

@@ -58,7 +58,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     }
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
-        population.sort_by(|a, b| a.fitness.partial_cmp(&b.fitness).unwrap());
+        population.sort_by(|a, b| a.fitness().partial_cmp(&b.fitness()).unwrap());
     }
     pub fn add(&mut self, subject: FitnessWrapped<Subject>) {
         self.subjects.push(subject);

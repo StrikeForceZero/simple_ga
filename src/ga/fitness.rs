@@ -11,9 +11,9 @@ pub type CalculateFitnessFn<'a, Subject> = Box<dyn Fn(&Subject) -> Fitness + 'a>
 #[derive(Derivative)]
 #[derivative(PartialOrd)]
 pub struct FitnessWrapped<Subject> {
-    pub fitness: Fitness,
+    fitness: Fitness,
     #[derivative(PartialEq = "ignore")]
-    pub subject: Rc<Subject>,
+    subject: Rc<Subject>,
 }
 
 impl<Subject> FitnessWrapped<Subject> {
@@ -22,6 +22,12 @@ impl<Subject> FitnessWrapped<Subject> {
             fitness,
             subject: Rc::new(subject),
         }
+    }
+    pub fn fitness(&self) -> Fitness {
+        self.fitness
+    }
+    pub fn subject(&self) -> Rc<Subject> {
+        self.subject.clone()
     }
 }
 

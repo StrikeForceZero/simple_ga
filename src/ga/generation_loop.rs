@@ -51,21 +51,21 @@ pub fn generation_loop<
         }
         if let Some(wrapped_subject) = state.population.subjects.first() {
             let subject = wrapped_subject;
-            let fitness_will_update = is_reverse_mode && subject.fitness > current_fitness
-                || !is_reverse_mode && subject.fitness < current_fitness;
+            let fitness_will_update = is_reverse_mode && subject.fitness() > current_fitness
+                || !is_reverse_mode && subject.fitness() < current_fitness;
             if fitness_will_update {
-                current_fitness = subject.fitness;
+                current_fitness = subject.fitness();
                 info!(
                     "generation: {}, fitness: {}/{}",
                     ix, current_fitness, options.target_fitness
                 );
-                (options.debug_print)(&subject.subject)
+                (options.debug_print)(&subject.subject())
             }
-            if subject.fitness >= options.max_fitness
-                || subject.fitness <= options.min_fitness
-                || options.target_fitness == subject.fitness
+            if subject.fitness() >= options.max_fitness
+                || subject.fitness() <= options.min_fitness
+                || options.target_fitness == subject.fitness()
             {
-                (options.debug_print)(&subject.subject);
+                (options.debug_print)(&subject.subject());
                 return;
             }
         }
@@ -85,8 +85,8 @@ pub fn generation_loop<
                     if ix == ix2 || indexes_to_delete.contains(&ix2) {
                         continue;
                     }
-                    if wrapped_subject2.fitness == wrapped_subject.fitness
-                        && wrapped_subject2.subject == wrapped_subject.subject
+                    if wrapped_subject2.fitness() == wrapped_subject.fitness()
+                        && wrapped_subject2.subject() == wrapped_subject.subject()
                     {
                         indexes_to_delete.insert(ix2);
                     }
