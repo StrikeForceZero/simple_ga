@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::usize;
 
@@ -12,7 +13,7 @@ use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
 use crate::ga::population::Population;
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,
@@ -26,6 +27,7 @@ pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub debug_print: Debug,
 }
 
+#[derive(Clone)]
 pub struct GenerationLoopState<Subject> {
     pub population: Population<Subject>,
 }

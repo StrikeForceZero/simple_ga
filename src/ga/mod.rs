@@ -13,7 +13,7 @@ pub mod subject;
 
 pub type CreateSubjectFn<Subject> = Box<dyn Fn() -> Subject>;
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct CreatePopulationOptions<SubjectFn> {
     pub population_size: usize,

@@ -9,6 +9,7 @@ use rand::prelude::ThreadRng;
 use crate::ga::fitness::FitnessWrapped;
 use crate::util::{Bias, random_index_bias};
 
+#[derive(Clone)]
 pub struct Population<Subject> {
     pub pool_size: usize,
     pub subjects: Vec<FitnessWrapped<Subject>>,

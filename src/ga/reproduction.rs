@@ -14,7 +14,7 @@ pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
 
 pub type SexualReproductionFn<Subject> = Box<dyn Fn(&Subject, &Subject) -> Subject>;
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer> {
     pub reproduction_limit: usize,

@@ -5,7 +5,7 @@ use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::util::{coin_flip, Odds};
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct ApplyMutationOptions<Mutator> {
     pub overall_mutation_chance: Odds,
