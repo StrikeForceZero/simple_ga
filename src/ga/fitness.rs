@@ -1,5 +1,5 @@
 use std::fmt;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -54,6 +54,15 @@ impl<T> Fit<Fitness> for FitnessWrapped<T> {
 impl<Subject: Display> Display for FitnessWrapped<Subject> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.fitness, self.subject)
+    }
+}
+
+impl<Subject: Debug> Debug for FitnessWrapped<Subject> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FitnessWrapped")
+            .field("fitness", &self.fitness)
+            .field("subject", &self.subject)
+            .finish()
     }
 }
 
