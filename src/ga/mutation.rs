@@ -1,11 +1,15 @@
+use derivative::Derivative;
 use rand::thread_rng;
 
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::util::{coin_flip, Odds};
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct ApplyMutationOptions<Mutator> {
     pub overall_mutation_chance: Odds,
+    #[derivative(Debug = "ignore")]
     pub mutation_chance_tuples: Vec<(Mutator, Odds)>,
     pub clone_on_mutation: bool,
 }

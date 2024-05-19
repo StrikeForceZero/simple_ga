@@ -1,3 +1,5 @@
+use derivative::Derivative;
+
 use population::Population;
 
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
@@ -11,8 +13,11 @@ pub mod subject;
 
 pub type CreateSubjectFn<Subject> = Box<dyn Fn() -> Subject>;
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct CreatePopulationOptions<SubjectFn> {
     pub population_size: usize,
+    #[derivative(Debug = "ignore")]
     pub create_subject_fn: SubjectFn,
 }
 

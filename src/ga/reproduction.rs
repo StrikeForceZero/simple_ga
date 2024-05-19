@@ -1,5 +1,6 @@
 use std::hash::Hash;
 
+use derivative::Derivative;
 use itertools::Itertools;
 use rand::thread_rng;
 
@@ -13,9 +14,12 @@ pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
 
 pub type SexualReproductionFn<Subject> = Box<dyn Fn(&Subject, &Subject) -> Subject>;
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer> {
     pub reproduction_limit: usize,
     pub overall_reproduction_chance: Odds,
+    #[derivative(Debug = "ignore")]
     pub reproduction_chance_tuples: Vec<(Reproducer, Odds)>,
 }
 

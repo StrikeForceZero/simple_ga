@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fmt;
-use std::fmt::Display;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use itertools::Itertools;
@@ -12,6 +12,15 @@ use crate::util::{Bias, random_index_bias};
 pub struct Population<Subject> {
     pub pool_size: usize,
     pub subjects: Vec<FitnessWrapped<Subject>>,
+}
+
+impl<Subject: Debug> Debug for Population<Subject> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Population")
+            .field("pool_size", &self.pool_size)
+            .field("subjects", &self.pool_size)
+            .finish()
+    }
 }
 
 impl<Subject: Display> Display for Population<Subject> {

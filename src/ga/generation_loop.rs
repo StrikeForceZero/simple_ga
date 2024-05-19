@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::usize;
 
+use derivative::Derivative;
 use itertools::Itertools;
 use rand::thread_rng;
 use tracing::info;
@@ -11,6 +12,8 @@ use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
 use crate::ga::population::Population;
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,
     pub starting_fitness: Fitness,
@@ -19,11 +22,20 @@ pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub max_fitness: Fitness,
     pub mutation_options: ApplyMutationOptions<Mutator>,
     pub reproduction_options: ApplyReproductionOptions<Reproducer>,
+    #[derivative(Debug = "ignore")]
     pub debug_print: Debug,
 }
 
 pub struct GenerationLoopState<Subject> {
     pub population: Population<Subject>,
+}
+
+impl<Subject: Debug> Debug for GenerationLoopState<Subject> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GenerationLoopState")
+            .field("population", &self.population)
+            .finish()
+    }
 }
 
 pub fn generation_loop<
