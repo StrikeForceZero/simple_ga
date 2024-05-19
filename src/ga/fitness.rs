@@ -66,6 +66,7 @@ impl<Subject: Debug> Debug for FitnessWrapped<Subject> {
     }
 }
 
+// TODO: need to be careful because this isn't making a new instance of Subject
 impl<Subject> Clone for FitnessWrapped<Subject> {
     fn clone(&self) -> Self {
         FitnessWrapped {
