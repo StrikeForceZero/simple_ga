@@ -11,6 +11,22 @@ pub struct FitnessWrapped<Subject> {
     pub subject: Rc<Subject>,
 }
 
+impl<Subject> FitnessWrapped<Subject> {
+    pub fn new(subject: Subject, fitness: Fitness) -> Self {
+        FitnessWrapped {
+            fitness,
+            subject: Rc::new(subject),
+        }
+    }
+    pub fn from(subject: Subject) -> Self
+    where
+        Subject: Fit<Fitness>,
+    {
+        let fitness = subject.measure();
+        Self::new(subject, fitness)
+    }
+}
+
 pub trait Fit<Fitness> {
     fn measure(&self) -> Fitness;
 }
@@ -37,22 +53,6 @@ impl<Subject> Clone for FitnessWrapped<Subject> {
     fn clone_from(&mut self, source: &Self) {
         self.fitness = source.fitness;
         self.subject = source.subject.clone();
-    }
-}
-
-impl<Subject> FitnessWrapped<Subject> {
-    pub fn new(subject: Subject, fitness: Fitness) -> Self {
-        FitnessWrapped {
-            fitness,
-            subject: Rc::new(subject),
-        }
-    }
-    pub fn from(subject: Subject) -> Self
-    where
-        Subject: Fit<Fitness>,
-    {
-        let fitness = subject.measure();
-        Self::new(subject, fitness)
     }
 }
 
