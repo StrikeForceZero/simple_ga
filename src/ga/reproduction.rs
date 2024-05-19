@@ -12,8 +12,6 @@ pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
     subject.clone()
 }
 
-pub type SexualReproductionFn<Subject> = Box<dyn Fn(&Subject, &Subject) -> Subject>;
-
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer> {

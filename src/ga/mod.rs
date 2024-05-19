@@ -11,8 +11,6 @@ pub mod population;
 pub mod reproduction;
 pub mod subject;
 
-pub type CreateSubjectFn<Subject> = Box<dyn Fn() -> Subject>;
-
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct CreatePopulationOptions<SubjectFn> {
