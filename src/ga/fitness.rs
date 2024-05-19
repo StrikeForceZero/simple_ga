@@ -23,10 +23,13 @@ impl<Subject> FitnessWrapped<Subject> {
             subject: Rc::new(subject),
         }
     }
-    pub fn from(subject: Subject) -> Self
-    where
-        Subject: Fit<Fitness>,
-    {
+}
+
+impl<Subject> From<Subject> for FitnessWrapped<Subject>
+where
+    Subject: Fit<Fitness>,
+{
+    fn from(subject: Subject) -> Self {
         let fitness = subject.measure();
         Self::new(subject, fitness)
     }
