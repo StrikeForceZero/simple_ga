@@ -1,13 +1,8 @@
 use rand::thread_rng;
 
-use crate::fitness::{Fitness, FitnessWrapped};
-use crate::ga::Population;
+use crate::ga::fitness::{Fitness, FitnessWrapped};
+use crate::ga::population::Population;
 use crate::util::{coin_flip, Odds};
-
-pub struct MutationFnParams<'a, Subject, Extra> {
-    subject: &'a Subject,
-    extra: &'a Extra,
-}
 
 pub struct ApplyMutationOptions<Mutator> {
     pub overall_mutation_chance: Odds,
@@ -31,12 +26,12 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
         if !coin_flip(&mut rng, options.overall_mutation_chance) {
             continue;
         }
-        for (mutation_fn, odds) in options.mutation_chance_tuples.iter() {
+        for (mutator, odds) in options.mutation_chance_tuples.iter() {
             if !coin_flip(&mut rng, *odds) {
                 continue;
             }
             let subject = &wrapped_subject.subject;
-            let mutated_subject = mutation_fn.apply(subject);
+            let mutated_subject = mutator.apply(subject);
             let fitness = Mutator::fitness(&mutated_subject);
             let fw = FitnessWrapped::new(mutated_subject, fitness);
             if options.clone_on_mutation {

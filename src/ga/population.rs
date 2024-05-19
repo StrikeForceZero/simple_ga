@@ -4,9 +4,9 @@ use std::fmt::Display;
 use std::hash::Hash;
 
 use itertools::Itertools;
-use rand::rngs::ThreadRng;
+use rand::prelude::ThreadRng;
 
-use crate::fitness::{Fit, Fitness, FitnessWrapped};
+use crate::ga::fitness::FitnessWrapped;
 use crate::util::{Bias, random_index_bias};
 
 pub struct Population<Subject> {
@@ -62,26 +62,5 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     }
     pub fn add(&mut self, subject: FitnessWrapped<Subject>) {
         self.subjects.push(subject);
-    }
-}
-
-pub type CreateSubjectFn<Subject> = Box<dyn Fn() -> Subject>;
-
-pub struct CreatePopulationOptions<SubjectFn> {
-    pub population_size: usize,
-    pub create_subject_fn: SubjectFn,
-}
-
-pub fn create_population_pool<Subject: Fit<Fitness>>(
-    options: CreatePopulationOptions<impl Fn() -> Subject>,
-) -> Population<Subject> {
-    let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
-    for _ in 0..options.population_size {
-        let subject = (options.create_subject_fn)();
-        subjects.push(FitnessWrapped::from(subject));
-    }
-    Population {
-        subjects,
-        pool_size: options.population_size,
     }
 }

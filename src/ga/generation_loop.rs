@@ -6,10 +6,10 @@ use itertools::Itertools;
 use rand::thread_rng;
 use tracing::info;
 
-use crate::fitness::{Fit, Fitness};
-use crate::ga::Population;
-use crate::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
-use crate::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
+use crate::ga::fitness::{Fit, Fitness};
+use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
+use crate::ga::population::Population;
+use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
 pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,

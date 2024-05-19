@@ -3,8 +3,8 @@ use std::hash::Hash;
 use itertools::Itertools;
 use rand::thread_rng;
 
-use crate::fitness::{Fitness, FitnessWrapped};
-use crate::ga::Population;
+use crate::ga::fitness::{Fitness, FitnessWrapped};
+use crate::ga::population::Population;
 use crate::util::{coin_flip, Odds};
 
 pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {

@@ -21,7 +21,7 @@ impl<T> Fit<Fitness> for FitnessWrapped<T> {
     }
 }
 
-impl<Subject: Display> fmt::Display for FitnessWrapped<Subject> {
+impl<Subject: Display> Display for FitnessWrapped<Subject> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.fitness, self.subject)
     }
