@@ -3,11 +3,16 @@ use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
+use derivative::Derivative;
+
 pub type Fitness = f64;
 pub type CalculateFitnessFn<'a, Subject> = Box<dyn Fn(&Subject) -> Fitness + 'a>;
 
+#[derive(Derivative)]
+#[derivative(PartialOrd)]
 pub struct FitnessWrapped<Subject> {
     pub fitness: Fitness,
+    #[derivative(PartialEq = "ignore")]
     pub subject: Rc<Subject>,
 }
 
