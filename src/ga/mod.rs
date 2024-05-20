@@ -10,6 +10,7 @@ pub mod mutation;
 pub mod population;
 pub mod prune;
 pub mod reproduction;
+pub mod select;
 pub mod subject;
 
 #[derive(Derivative, Clone)]

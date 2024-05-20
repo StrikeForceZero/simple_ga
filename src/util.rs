@@ -1,3 +1,4 @@
+use itertools::traits::IteratorIndex;
 use rand::Rng;
 use rand::rngs::ThreadRng;
 
@@ -22,18 +23,22 @@ fn extract_first_decimal(num: f64) -> u8 {
     ((f64::abs(num) * 10.0) % 10.0) as u8
 }
 
-/// Returns a random index from 0-len with a given bias
-pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
+fn _random_index_bias<I: From<usize>>(rng: &mut ThreadRng, len: usize, bias: Bias) -> I {
     let x: f64 = rng.gen_range(0.0..=1.0);
 
     const BIAS: f64 = 2.0;
     let value = 1f64 - x.powf(1f64 / BIAS).sqrt();
     let value = value * len as f64;
     let value = value.floor() as usize;
-    match bias {
+    I::from(match bias {
         Bias::Front => value,
         Bias::End => len - 1 - value,
-    }
+    })
+}
+
+/// Returns a random index from 0-len with a given bias
+pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
+    _random_index_bias::<usize>(rng, len, bias)
 }
 
 #[cfg(test)]
