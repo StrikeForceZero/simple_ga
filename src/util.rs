@@ -52,7 +52,7 @@ pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
 }
 
 #[cfg(test)]
-mod tracing {
+pub(crate) mod debug_tracing {
     use std::sync::Once;
 
     use tracing_subscriber::EnvFilter;
