@@ -8,6 +8,7 @@ pub mod fitness;
 pub mod generation_loop;
 pub mod mutation;
 pub mod population;
+pub mod prune;
 pub mod reproduction;
 pub mod subject;
 

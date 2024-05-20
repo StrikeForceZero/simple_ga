@@ -7,6 +7,7 @@ use itertools::Itertools;
 use rand::prelude::ThreadRng;
 
 use crate::ga::fitness::FitnessWrapped;
+use crate::ga::prune::PruneRandom;
 use crate::util::{Bias, random_index_bias};
 
 #[derive(Clone)]
@@ -36,13 +37,12 @@ impl<Subject: Display> Display for Population<Subject> {
 }
 
 impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
-    pub fn prune(&mut self, rng: &mut ThreadRng) {
-        let mut target_index = 0;
-        while target_index == 0 {
-            target_index = random_index_bias(rng, self.subjects.len(), Bias::End);
-        }
-        let population = &mut self.subjects;
-        population.drain(target_index..target_index + 1);
+    pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(
+        &mut self,
+        pruner: P,
+        rng: &mut ThreadRng,
+    ) {
+        pruner.prune_random(&mut self.subjects, rng);
     }
     pub fn select(&mut self, rng: &mut ThreadRng, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
         let population = &mut self.subjects;

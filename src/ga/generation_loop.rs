@@ -11,6 +11,7 @@ use tracing::info;
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
 use crate::ga::population::Population;
+use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
 #[derive(Derivative, Clone)]
@@ -83,10 +84,8 @@ pub fn generation_loop<
                 return;
             }
         }
-        while state.population.pool_size < state.population.subjects.len() {
-            // TODO: should be biased towards the front if we have is_reverse_mode, maybe?
-            state.population.prune(&mut rng);
-        }
+        PruneExtraSkipFirst::new(state.population.pool_size)
+            .prune_random(&mut state.population.subjects, &mut rng);
         apply_reproductions(&mut state.population, &options.reproduction_options);
         apply_mutations(&mut state.population, &options.mutation_options);
         if options.remove_duplicates {
