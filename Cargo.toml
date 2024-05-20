@@ -6,6 +6,7 @@ authors = ["Brett Striker <strikeforcezero@gmail.com>"]
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rstest = "0.19"
 
 [dependencies]
 rand = "0.8"
