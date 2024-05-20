@@ -44,8 +44,8 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     ) {
         pruner.prune_random(&mut self.subjects, rng);
     }
-    pub fn select(&mut self, rng: &mut ThreadRng, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
-        let population = &mut self.subjects;
+    pub fn select(&self, rng: &mut ThreadRng, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
+        let population = &self.subjects;
         // TODO: should this care about uniqueness?
         let mut selected = HashSet::new();
         // since the early iterations will have a lot of blanks we need to set a limit of how many attempts of trying to find unique subjects we find.
@@ -64,7 +64,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
             }
             max_iter -= 1.0;
         }
-        selected.iter().cloned().collect()
+        selected.into_iter().collect()
     }
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
