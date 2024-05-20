@@ -39,7 +39,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     pub fn prune(&mut self, rng: &mut ThreadRng) {
         let mut target_index = 0;
         while target_index == 0 {
-            target_index = random_index_bias(rng, self.subjects.len(), Bias::End, BiasMethod::Cdf);
+            target_index = random_index_bias(rng, self.subjects.len(), Bias::End);
         }
         let population = &mut self.subjects;
         population.drain(target_index..target_index + 1);
@@ -51,8 +51,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
         // since the early iterations will have a lot of blanks we need to set a limit of how many attempts of trying to find unique subjects we find.
         let mut max_iter = limit as f64 * 1.1;
         while selected.len() < limit {
-            let target_index =
-                random_index_bias(rng, population.len(), Bias::Front, BiasMethod::Cdf);
+            let target_index = random_index_bias(rng, population.len(), Bias::Front);
             let Some(subject) = population.get(target_index) else {
                 panic!(
                     "index miss, tried getting {target_index} with len of {}",
