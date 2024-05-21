@@ -37,7 +37,7 @@ fn extract_first_decimal(num: f64) -> u8 {
 /// x: 0.0 - <1.0
 fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
     debug_assert!((0.0..1.0).contains(&x), "x={x} must be between 0.0..1.0");
-    let b = 2.4f64;
+    let b = 3f64;
     let biased_value = match bias {
         Bias::Front => {
             let t = x.powf(b);
