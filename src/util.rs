@@ -52,7 +52,7 @@ fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
     } / 2.0;
 
     // Calculate the index
-    (biased_value * (len + 1) as f64).floor() as usize
+    (biased_value * len as f64).floor() as usize
 }
 
 /// Returns a random index from 0-len with a given bias
