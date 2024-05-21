@@ -39,7 +39,7 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
     let mut appended_subjects = vec![];
     // TODO: we probably need criteria on who can reproduce with who
     for (subject_a, subject_b) in population
-        .select(&mut rng, options.reproduction_limit)
+        .select_front_bias_random(&mut rng, options.reproduction_limit)
         .iter()
         .tuple_windows()
     {

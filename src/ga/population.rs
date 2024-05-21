@@ -44,7 +44,11 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     ) {
         pruner.prune_random(&mut self.subjects, rng);
     }
-    pub fn select(&self, rng: &mut ThreadRng, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
+    pub fn select_front_bias_random(
+        &self,
+        rng: &mut ThreadRng,
+        limit: usize,
+    ) -> Vec<&FitnessWrapped<Subject>> {
         SelectRandomManyWithBias::new(limit, Bias::Front).select_random(rng, &self.subjects)
     }
     pub fn sort(&mut self) {
