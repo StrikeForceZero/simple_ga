@@ -16,7 +16,7 @@ impl<T> PruneRandom<Vec<T>> for PruneSingleSkipFirst {
     fn prune_random(self, items: &mut Vec<T>, rng: &mut ThreadRng) {
         let mut target_index = 0;
         while target_index == 0 {
-            target_index = random_index_bias(rng, items.len(), Bias::End);
+            target_index = random_index_bias(rng, items.len(), Bias::Back);
         }
         items.drain(target_index..target_index + 1);
     }

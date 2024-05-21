@@ -17,14 +17,14 @@ pub fn coin_flip(rng: &mut ThreadRng, odds: Odds) -> bool {
 #[derive(Debug, Copy, Clone)]
 pub enum Bias {
     Front,
-    End,
+    Back,
 }
 
 impl Bias {
     pub fn inverse(&self) -> Self {
         match self {
-            Self::Front => Self::End,
-            Self::End => Self::Front,
+            Self::Front => Self::Back,
+            Self::Back => Self::Front,
         }
     }
 }
@@ -44,7 +44,7 @@ fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
             let u = 1.0 - (1.0 - x).powf(1.0 / b);
             t + u
         }
-        Bias::End => {
+        Bias::Back => {
             let t = 1.0 - (x - 1.0).abs().powf(b);
             let u = x.powf(1.0 / b);
             t + u
@@ -93,7 +93,7 @@ mod tests {
     #[rstest(
         input, expected,
         case::front((100, Bias::Front), |x| x < 30.0),
-        case::end((100, Bias::End), |x| x > 70.0),
+        case::end((100, Bias::Back), |x| x > 70.0),
     )]
     fn test_random_index_bias(input: (usize, Bias), expected: fn(f32) -> bool) {
         let (input, bias) = input;
