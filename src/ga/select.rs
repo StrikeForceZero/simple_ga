@@ -1,30 +1,44 @@
 use std::collections::HashSet;
 
+use itertools::Itertools;
 use rand::prelude::ThreadRng;
 
 use crate::util::{Bias, random_index_bias};
 
-pub trait SelectRandomOwned<Iter>
-where
-    Iter: IntoIterator + ExactSizeIterator,
-{
+pub trait SelectRandomOwned<T> {
     type Output;
-    fn select_random_owned(self, rng: &mut ThreadRng, items: Iter) -> Self::Output;
+    fn select_random_owned<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output;
 }
 
 pub trait SelectRandom<T> {
-    type Output<'a>
-    where
-        T: 'a;
-    fn select_random<'a>(self, rng: &mut ThreadRng, items: &'a [T]) -> Self::Output<'a>;
+    type Output;
+    fn select_random<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output;
 }
 
-pub trait SelectRandomMut<'a, T>
-where
-    T: 'a,
-{
+pub trait SelectRandomMut<T> {
     type Output;
-    fn select_random_mut(self, rng: &mut ThreadRng, items: &'a mut [T]) -> Self::Output;
+    fn select_random_mut<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,31 +55,48 @@ impl SelectRandomWithBias {
     }
 }
 
-impl<Iter> SelectRandomOwned<Iter> for SelectRandomWithBias
-where
-    Iter: IntoIterator + ExactSizeIterator,
-{
-    type Output = Option<<Iter as IntoIterator>::Item>;
-    fn select_random_owned(self, rng: &mut ThreadRng, items: Iter) -> Self::Output {
-        let index = random_index_bias(rng, items.len(), self.bias);
-        items.into_iter().nth(index)
+impl<T> SelectRandomOwned<T> for SelectRandomWithBias {
+    type Output = Option<T>;
+    fn select_random_owned<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
+        let mut items = items.into_iter();
+        items.nth(random_index_bias(rng, items.len(), self.bias))
     }
 }
 
 impl<T> SelectRandom<T> for SelectRandomWithBias {
-    type Output<'a> = Option<&'a T> where T: 'a;
-    fn select_random<'a>(self, rng: &mut ThreadRng, items: &'a [T]) -> Self::Output<'a> {
-        items.get(random_index_bias(rng, items.len(), self.bias))
+    type Output = Option<T>;
+    fn select_random<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
+        let mut items = items.into_iter();
+        items.nth(random_index_bias(rng, items.len(), self.bias))
     }
 }
 
-impl<'a, T> SelectRandomMut<'a, &'a mut T> for SelectRandomWithBias
-where
-    T: 'a,
-{
-    type Output = Option<&'a mut &'a mut T>;
-    fn select_random_mut(self, rng: &mut ThreadRng, items: &'a mut [&'a mut T]) -> Self::Output {
-        items.get_mut(random_index_bias(rng, items.len(), self.bias))
+impl<T> SelectRandomMut<T> for SelectRandomWithBias {
+    type Output = Option<T>;
+    fn select_random_mut<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
+        let mut items = items.into_iter();
+        items.nth(random_index_bias(rng, items.len(), self.bias))
     }
 }
 
@@ -105,20 +136,41 @@ impl SelectRandomManyWithBias {
             selected_indexes.into_iter().collect()
         }
     }
-    fn select_random<'a, T>(self, rng: &mut ThreadRng, items: &'a [T]) -> Vec<&'a T> {
-        self.select_random_indexes(rng, items.len())
-            .into_iter()
-            .filter_map(|ix| items.get(ix))
-            .collect()
-    }
-    fn select_random_mut<'a, T>(
+    fn select_random<
+        T,
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
         self,
         rng: &mut ThreadRng,
-        items: &'a mut [&'a mut T],
-    ) -> Vec<&'a mut &'a mut T> {
+        items: Iter,
+    ) -> Vec<T> {
+        let mut items = items.into_iter();
+        let (_, data) = self
+            .select_random_indexes(rng, items.len())
+            .into_iter()
+            .sorted()
+            .fold((0, vec![]), |(skipped, mut data), next_ix| {
+                let Some(item) = items.nth(next_ix - skipped) else {
+                    unreachable!("index out of bounds?");
+                };
+                data.push(item);
+                (next_ix + 1, data)
+            });
+        data
+    }
+    fn select_random_mut<
+        T,
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Vec<T> {
+        let items = items.into_iter();
         let mut selected_indexes = self.select_random_indexes(rng, items.len());
         items
-            .iter_mut()
             .enumerate()
             .filter_map(|(ix, v)| {
                 if selected_indexes.remove(&ix) {
@@ -129,13 +181,18 @@ impl SelectRandomManyWithBias {
             })
             .collect()
     }
-    fn select_random_owned<'a, Iter, Item>(self, rng: &mut ThreadRng, items: Iter) -> Vec<Item>
-    where
-        Iter: IntoIterator<Item = Item> + ExactSizeIterator,
-    {
+    fn select_random_owned<
+        T,
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Vec<T> {
+        let items = items.into_iter();
         let mut selected_indexes = self.select_random_indexes(rng, items.len());
         items
-            .into_iter()
             .enumerate()
             .filter_map(|(ix, v)| {
                 if selected_indexes.remove(&ix) {
@@ -148,29 +205,44 @@ impl SelectRandomManyWithBias {
     }
 }
 
-impl<Iter> SelectRandomOwned<Iter> for SelectRandomManyWithBias
-where
-    Iter: IntoIterator + ExactSizeIterator,
-{
-    type Output = Vec<<Iter as IntoIterator>::Item>;
-    fn select_random_owned(self, rng: &mut ThreadRng, items: Iter) -> Self::Output {
+impl<T> SelectRandomOwned<T> for SelectRandomManyWithBias {
+    type Output = Vec<T>;
+    fn select_random_owned<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
         self.select_random_owned(rng, items)
     }
 }
 
 impl<T> SelectRandom<T> for SelectRandomManyWithBias {
-    type Output<'a> = Vec<&'a T> where T: 'a;
-    fn select_random<'a>(self, rng: &mut ThreadRng, items: &'a [T]) -> Self::Output<'a> {
-        self.select_random(rng, items)
+    type Output = Vec<T>;
+    fn select_random<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
+        self.select_random(rng, items.into_iter())
     }
 }
 
-impl<'a, T> SelectRandomMut<'a, &'a mut T> for SelectRandomManyWithBias
-where
-    T: 'a,
-{
-    type Output = Vec<&'a mut &'a mut T>;
-    fn select_random_mut(self, rng: &mut ThreadRng, items: &'a mut [&'a mut T]) -> Self::Output {
+impl<T> SelectRandomMut<T> for SelectRandomManyWithBias {
+    type Output = Vec<T>;
+    fn select_random_mut<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        rng: &mut ThreadRng,
+        items: Iter,
+    ) -> Self::Output {
         self.select_random_mut(rng, items)
     }
 }
@@ -191,7 +263,7 @@ mod tests {
             let foo = Foo(1);
             let items = [foo];
             let selected = SelectRandomWithBias::new(Bias::Front)
-                .select_random_owned(&mut thread_rng(), items.into_iter());
+                .select_random_owned(&mut thread_rng(), items);
             assert_eq!(selected, Some(Foo(1)));
         }
 
@@ -200,10 +272,10 @@ mod tests {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
             let foo = Foo(1);
-            let items = [&foo];
+            let items = &[foo];
             let selected =
-                SelectRandomWithBias::new(Bias::Front).select_random(&mut thread_rng(), &items);
-            assert_eq!(selected, Some(&foo).as_ref());
+                SelectRandomWithBias::new(Bias::Front).select_random(&mut thread_rng(), items);
+            assert_eq!(selected, Some(Foo(1)).as_ref());
         }
 
         #[test]
@@ -211,9 +283,9 @@ mod tests {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
             let mut foo = Foo(1);
-            let mut items = [&mut foo];
-            let selected = SelectRandomWithBias::new(Bias::Front)
-                .select_random_mut(&mut thread_rng(), &mut items);
+            let items = [&mut foo];
+            let selected =
+                SelectRandomWithBias::new(Bias::Front).select_random_mut(&mut thread_rng(), items);
             let Some(selected) = selected else {
                 unreachable!();
             };
@@ -244,7 +316,7 @@ mod tests {
             struct Foo(usize);
             let items = [Foo(1), Foo(1), Foo(1)];
             let selected = SelectRandomManyWithBias::new(2, Bias::Front)
-                .select_random_owned(&mut thread_rng(), items.into_iter());
+                .select_random_owned(&mut thread_rng(), items);
             assert_eq!(selected, vec![Foo(1), Foo(1)]);
         }
 
@@ -255,24 +327,31 @@ mod tests {
             let foo = Foo(1);
             let items = [&foo];
             let selected = SelectRandomManyWithBias::new(2, Bias::Front)
-                .select_random(&mut thread_rng(), &items);
-            assert_eq!(selected, vec![&&foo]);
+                .select_random(&mut thread_rng(), items);
+            assert_eq!(selected, vec![&foo]);
+        }
+
+        #[test]
+        fn test_select_random_range() {
+            let selected = SelectRandomManyWithBias::new(8, Bias::Front)
+                .select_random(&mut thread_rng(), 0..10);
+            assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), 8);
         }
 
         #[test]
         fn test_select_random_mut() {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
-            let mut items = [&mut Foo(1), &mut Foo(1)];
+            let items = [&mut Foo(1), &mut Foo(1)];
             let mut selected = SelectRandomManyWithBias::new(2, Bias::Front)
-                .select_random_mut(&mut thread_rng(), &mut items);
+                .select_random_mut(&mut thread_rng(), items);
             {
                 let Some(selected) = selected.get_mut(0) else {
                     unreachable!();
                 };
                 selected.0 = 2;
             }
-            assert_eq!(selected.first(), Some(&&mut &mut Foo(2)));
+            assert_eq!(selected.into_iter().next(), Some(&mut Foo(2)));
         }
     }
 }
