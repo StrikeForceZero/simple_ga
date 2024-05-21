@@ -17,14 +17,18 @@ pub fn coin_flip(rng: &mut ThreadRng, odds: Odds) -> bool {
 #[derive(Debug, Copy, Clone)]
 pub enum Bias {
     Front,
+    FrontInverse,
     Back,
+    BackInverse,
 }
 
 impl Bias {
     pub fn inverse(&self) -> Self {
         match self {
-            Self::Front => Self::Back,
-            Self::Back => Self::Front,
+            Self::Front => Self::FrontInverse,
+            Self::FrontInverse => Self::Front,
+            Self::Back => Self::BackInverse,
+            Self::BackInverse => Self::Back,
         }
     }
 }
@@ -33,12 +37,9 @@ fn extract_first_decimal(num: f64) -> u8 {
     ((f64::abs(num) * 10.0) % 10.0) as u8
 }
 
-/// Returns a random index from 0-len with a given bias
-/// x: 0.0 - <1.0
-fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
-    debug_assert!((0.0..1.0).contains(&x), "x={x} must be between 0.0..1.0");
+fn bias_value(x: f64, bias: Bias) -> f64 {
     let b = 3f64;
-    let biased_value = match bias {
+    match bias {
         Bias::Front => {
             let t = x.powf(b);
             let u = 1.0 - (1.0 - x).powf(1.0 / b);
@@ -49,8 +50,15 @@ fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
             let u = x.powf(1.0 / b);
             t + u
         }
-    } / 2.0;
+        Bias::FrontInverse | Bias::BackInverse => 1.0 - bias_value(x, bias.inverse()),
+    }
+}
 
+/// Returns a random index from 0-len with a given bias
+/// x: 0.0 - <1.0
+fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
+    debug_assert!((0.0..1.0).contains(&x), "x={x} must be between 0.0..1.0");
+    let biased_value = bias_value(x, bias) / 2.0;
     // Calculate the index
     (biased_value * len as f64).floor() as usize
 }
