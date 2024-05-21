@@ -8,7 +8,8 @@ use rand::prelude::ThreadRng;
 
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
-use crate::util::{Bias, random_index_bias};
+use crate::ga::select::{SelectRandom, SelectRandomManyWithBias};
+use crate::util::Bias;
 
 #[derive(Clone)]
 pub struct Population<Subject> {
@@ -45,26 +46,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
         pruner.prune_random(&mut self.subjects, rng);
     }
     pub fn select(&self, rng: &mut ThreadRng, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
-        let population = &self.subjects;
-        // TODO: should this care about uniqueness?
-        let mut selected = HashSet::new();
-        // since the early iterations will have a lot of blanks we need to set a limit of how many attempts of trying to find unique subjects we find.
-        let mut max_iter = limit as f64 * 1.1;
-        while selected.len() < limit {
-            let target_index = random_index_bias(rng, population.len(), Bias::Front);
-            let Some(subject) = population.get(target_index) else {
-                panic!(
-                    "index miss, tried getting {target_index} with len of {}",
-                    population.len()
-                );
-            };
-            selected.insert(subject);
-            if max_iter <= 0.0 {
-                break;
-            }
-            max_iter -= 1.0;
-        }
-        selected.into_iter().collect()
+        SelectRandomManyWithBias::new(limit, Bias::Front).select_random(rng, &self.subjects)
     }
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
