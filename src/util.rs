@@ -33,22 +33,20 @@ fn extract_first_decimal(num: f64) -> u8 {
     ((f64::abs(num) * 10.0) % 10.0) as u8
 }
 
-fn _random_index_bias<I: From<usize>>(rng: &mut ThreadRng, len: usize, bias: Bias) -> I {
-    let x: f64 = rng.gen_range(0.0..=1.0);
-
-    const BIAS: f64 = 2.0;
-    let value = 1f64 - x.powf(1f64 / BIAS).sqrt();
-    let value = value * len as f64;
-    let value = value.floor() as usize;
-    I::from(match bias {
-        Bias::Front => value,
-        Bias::End => len - 1 - value,
-    })
-}
-
 /// Returns a random index from 0-len with a given bias
 pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
-    _random_index_bias::<usize>(rng, len, bias)
+    let x: f64 = rng.gen_range(0.0..=1.0);
+
+    let biased_value = match bias {
+        Bias::Front => 1.0 - x.powf(0.25f64),
+        Bias::End => (1.0 - x).powf(0.25f64),
+    };
+
+    // Calculate the index
+    let value = biased_value * len as f64;
+    let value = value.floor() as usize;
+
+    value
 }
 
 #[cfg(test)]
@@ -78,14 +76,13 @@ pub(crate) mod debug_tracing {
 mod tests {
     use rand::thread_rng;
     use rstest::rstest;
-    use tracing::debug;
 
     use super::*;
 
     #[rstest(
         input, expected,
-        case((100, Bias::End), |x| x > 70),
-        case((100, Bias::Front), |x| x < 30),
+        case::front((100, Bias::Front), |x| x < 30),
+        case::end((100, Bias::End), |x| x > 70),
     )]
     /// There is at worst a 1/10^10 (1 in 10 billion) chance this fails
     fn test_random_index_bias(input: (usize, Bias), expected: fn(usize) -> bool) {
@@ -95,7 +92,7 @@ mod tests {
                 .map(|_| random_index_bias(&mut thread_rng(), input, bias))
                 .sum::<usize>()
                 / input;
-            debug!("{bias:?} {avg}");
+            println!("{bias:?} {avg}");
             assert!(expected(avg));
         }
     }
