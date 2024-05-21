@@ -34,19 +34,31 @@ fn extract_first_decimal(num: f64) -> u8 {
 }
 
 /// Returns a random index from 0-len with a given bias
-pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
-    let x: f64 = rng.gen_range(0.0..=1.0);
-
+/// x: 0.0 - <1.0
+fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
+    debug_assert!((0.0..1.0).contains(&x), "x={x} must be between 0.0..1.0");
+    let b = 2.4f64;
     let biased_value = match bias {
-        Bias::Front => 1.0 - x.powf(0.25f64),
-        Bias::End => (1.0 - x).powf(0.25f64),
-    };
+        Bias::Front => {
+            let t = x.powf(b);
+            let u = 1.0 - (1.0 - x).powf(1.0 / b);
+            t + u
+        }
+        Bias::End => {
+            let t = 1.0 - (x - 1.0).abs().powf(b);
+            let u = x.powf(1.0 / b);
+            t + u
+        }
+    } / 2.0;
 
     // Calculate the index
-    let value = biased_value * len as f64;
-    let value = value.floor() as usize;
+    (biased_value * (len + 1) as f64).floor() as usize
+}
 
-    value
+/// Returns a random index from 0-len with a given bias
+pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
+    let x: f64 = rng.gen_range(0.0..1.0);
+    _random_index_bias(x, len, bias)
 }
 
 #[cfg(test)]
@@ -74,26 +86,23 @@ pub(crate) mod debug_tracing {
 
 #[cfg(test)]
 mod tests {
-    use rand::thread_rng;
     use rstest::rstest;
 
     use super::*;
 
     #[rstest(
         input, expected,
-        case::front((100, Bias::Front), |x| x < 30),
-        case::end((100, Bias::End), |x| x > 70),
+        case::front((100, Bias::Front), |x| x < 30.0),
+        case::end((100, Bias::End), |x| x > 70.0),
     )]
-    /// There is at worst a 1/10^10 (1 in 10 billion) chance this fails
-    fn test_random_index_bias(input: (usize, Bias), expected: fn(usize) -> bool) {
+    fn test_random_index_bias(input: (usize, Bias), expected: fn(f32) -> bool) {
         let (input, bias) = input;
-        for _ in 0..100 {
-            let avg = (0..input)
-                .map(|_| random_index_bias(&mut thread_rng(), input, bias))
-                .sum::<usize>()
-                / input;
-            println!("{bias:?} {avg}");
-            assert!(expected(avg));
-        }
+        const SAMPLE_SIZE: usize = 10000;
+        let avg = (0..SAMPLE_SIZE)
+            .map(|n| _random_index_bias(n as f64 / SAMPLE_SIZE as f64, input, bias))
+            .sum::<usize>() as f32
+            / SAMPLE_SIZE as f32;
+        println!("{bias:?} {avg}");
+        assert!(expected(avg));
     }
 }
