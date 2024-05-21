@@ -19,6 +19,16 @@ pub enum Bias {
     Front,
     End,
 }
+
+impl Bias {
+    pub fn inverse(&self) -> Self {
+        match self {
+            Self::Front => Self::End,
+            Self::End => Self::Front,
+        }
+    }
+}
+
 fn extract_first_decimal(num: f64) -> u8 {
     ((f64::abs(num) * 10.0) % 10.0) as u8
 }
