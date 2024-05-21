@@ -339,6 +339,24 @@ mod tests {
         }
 
         #[test]
+        fn test_select_random_range_a() {
+            let len = 50000;
+            let expected = len / 2 - 1;
+            let selected = SelectRandomManyWithBias::new(expected, Bias::Front)
+                .select_random(&mut thread_rng(), 0..len);
+            assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), expected);
+        }
+
+        #[test]
+        fn test_select_random_range_b() {
+            let len = 50000;
+            let expected = len / 2 + 1;
+            let selected = SelectRandomManyWithBias::new(expected, Bias::Front)
+                .select_random(&mut thread_rng(), 0..len);
+            assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), expected);
+        }
+
+        #[test]
         fn test_select_random_mut() {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
