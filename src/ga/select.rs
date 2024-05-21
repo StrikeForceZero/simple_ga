@@ -105,28 +105,6 @@ impl SelectRandomManyWithBias {
             });
         data
     }
-    fn select_random2<
-        T,
-        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
-        Iter2: Iterator<Item = T> + ExactSizeIterator,
-    >(
-        self,
-        rng: &mut ThreadRng,
-        items: Iter,
-    ) -> Vec<T> {
-        let items = items.into_iter();
-        let mut selected_indexes = self.select_random_indexes(rng, items.len());
-        items
-            .enumerate()
-            .filter_map(|(ix, v)| {
-                if selected_indexes.remove(&ix) {
-                    Some(v)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
 }
 
 impl<T> SelectRandom<T> for SelectRandomManyWithBias {
@@ -258,7 +236,7 @@ mod tests {
             struct Foo(usize);
             let items = [&mut Foo(1), &mut Foo(1)];
             let mut selected = SelectRandomManyWithBias::new(2, Bias::Front)
-                .select_random2(&mut thread_rng(), items);
+                .select_random(&mut thread_rng(), items);
             {
                 let Some(selected) = selected.get_mut(0) else {
                     unreachable!();
