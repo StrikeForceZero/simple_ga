@@ -90,10 +90,17 @@ impl SelectRandomManyWithBias {
         // not enough items just return the original slice as a new vec
         if max_amount >= len {
             (0..len).collect()
-        } else {
+        } else if (max_amount as f32 / len as f32) < 0.5 {
             let mut selected_indexes = HashSet::new();
             while selected_indexes.len() < max_amount {
                 selected_indexes.insert(random_index_bias(rng, len, self.bias));
+            }
+            selected_indexes.into_iter().collect()
+        } else {
+            // it'll be faster to remove indexes randomly until we get the desired size
+            let mut selected_indexes = (0..len).collect::<HashSet<_>>();
+            while selected_indexes.len() > max_amount {
+                selected_indexes.remove(&random_index_bias(rng, len, self.bias.inverse()));
             }
             selected_indexes.into_iter().collect()
         }
@@ -222,6 +229,14 @@ mod tests {
         use rand::thread_rng;
 
         use super::*;
+
+        #[test]
+        fn test_select_random_indexes() {
+            let items = 0..1000000;
+            let select = SelectRandomManyWithBias::new(items.len() - 1, Bias::Front)
+                .select_random_indexes(&mut thread_rng(), items.len());
+            assert_eq!(select.len(), items.len() - 1);
+        }
 
         #[test]
         fn test_select_random_owned() {
