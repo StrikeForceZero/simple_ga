@@ -51,6 +51,13 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     ) -> Vec<&FitnessWrapped<Subject>> {
         SelectRandomManyWithBias::new(limit, Bias::Front).select_random(rng, &self.subjects)
     }
+    pub fn select_back_bias_random(
+        &self,
+        rng: &mut ThreadRng,
+        limit: usize,
+    ) -> Vec<&FitnessWrapped<Subject>> {
+        SelectRandomManyWithBias::new(limit, Bias::Back).select_random(rng, &self.subjects)
+    }
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
         population.sort_by(|a, b| a.fitness().partial_cmp(&b.fitness()).unwrap());
