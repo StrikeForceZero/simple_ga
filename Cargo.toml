@@ -10,6 +10,7 @@ members = ["crates/*"]
 [dev-dependencies]
 simple_ga_internal_lib = { path = "crates/simple_ga_internal_lib" }
 rstest = "0.19"
+lazy_static = "1.4.0"
 
 [dependencies]
 rand = "0.8"
