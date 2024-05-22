@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
+use std::ops::Range;
 use std::usize;
 
 use derivative::Derivative;
@@ -20,8 +21,8 @@ pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,
     pub starting_fitness: Fitness,
     pub target_fitness: Fitness,
-    pub min_fitness: Fitness,
-    pub max_fitness: Fitness,
+    /// min and max fitness range to terminate the loop
+    pub fitness_range: Range<Fitness>,
     pub mutation_options: ApplyMutationOptions<Mutator>,
     pub reproduction_options: ApplyReproductionOptions<Reproducer>,
     #[derivative(Debug = "ignore")]
@@ -79,8 +80,7 @@ pub fn generation_loop<
                 info!("generation: {generation_ix}, fitness: {current_fitness}/{target_fitness}");
                 (options.debug_print)(&subject.subject())
             }
-            if subject.fitness() >= options.max_fitness
-                || subject.fitness() <= options.min_fitness
+            if options.fitness_range.contains(&subject.fitness())
                 || options.target_fitness == subject.fitness()
             {
                 (options.debug_print)(&subject.subject());
