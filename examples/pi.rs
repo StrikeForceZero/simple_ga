@@ -4,9 +4,9 @@ use lazy_static::lazy_static;
 use rand::{random, Rng, thread_rng};
 use tracing::info;
 
-use simple_ga::ga::{create_population_pool, CreatePopulationOptions};
+use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::{generation_loop, GenerationLoopOptions, GenerationLoopState};
+use simple_ga::ga::ga_runner::{GaRunnerState, ga_runner};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
@@ -217,7 +217,7 @@ fn main() {
         println!("    :{:01$}^", " ", fitness as usize);
         println!("best: {subject} ({fitness})");
     }
-    let generation_loop_options = GenerationLoopOptions {
+    let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
@@ -258,10 +258,10 @@ fn main() {
         create_subject_fn: create_subject_fn.clone(),
     });
 
-    let mut generation_loop_state = GenerationLoopState { population };
+    let mut generation_loop_state = GaRunnerState { population };
 
     info!("starting generation loop");
-    generation_loop(&generation_loop_options, &mut generation_loop_state);
+    ga_runner(&generation_loop_options, &mut generation_loop_state);
     info!("done")
 }
 

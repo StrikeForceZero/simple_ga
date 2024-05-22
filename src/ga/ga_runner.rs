@@ -11,32 +11,18 @@ use tracing::info;
 use tracing::log::debug;
 
 use crate::ga::fitness::{Fit, Fitness};
+use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
-#[derive(Derivative, Clone, Default)]
-#[derivative(Debug)]
-pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
-    pub remove_duplicates: bool,
-    /// initial fitness to target fitness
-    pub fitness_initial_to_target_range: Range<Fitness>,
-    /// min and max fitness range to terminate the loop
-    pub fitness_range: Range<Fitness>,
-    pub mutation_options: ApplyMutationOptions<Mutator>,
-    pub reproduction_options: ApplyReproductionOptions<Reproducer>,
-    #[derivative(Debug = "ignore")]
-    pub debug_print: Debug,
-    pub log_on_mod_zero_for_generation_ix: usize,
-}
-
 #[derive(Clone)]
-pub struct GenerationLoopState<Subject> {
+pub struct GaRunnerState<Subject> {
     pub population: Population<Subject>,
 }
 
-impl<Subject: Debug> Debug for GenerationLoopState<Subject> {
+impl<Subject: Debug> Debug for GaRunnerState<Subject> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GenerationLoopState")
             .field("population", &self.population)
@@ -44,14 +30,14 @@ impl<Subject: Debug> Debug for GenerationLoopState<Subject> {
     }
 }
 
-pub fn generation_loop<
+pub fn ga_runner<
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
     Debug: Fn(&Subject),
 >(
-    options: &GenerationLoopOptions<Mutator, Reproducer, Debug>,
-    state: &mut GenerationLoopState<Subject>,
+    options: &GeneticAlgorithmOptions<Mutator, Reproducer, Debug>,
+    state: &mut GaRunnerState<Subject>,
 ) {
     #[cfg(test)]
     {
