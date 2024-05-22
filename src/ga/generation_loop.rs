@@ -50,6 +50,10 @@ pub fn generation_loop<
     options: &GenerationLoopOptions<Mutator, Reproducer, Debug>,
     state: &mut GenerationLoopState<Subject>,
 ) {
+    #[cfg(test)]
+    {
+        crate::util::debug_tracing::init_tracing();
+    }
     let mut rng = thread_rng();
     let mut ix = 0;
     let mut current_fitness = options.starting_fitness;
