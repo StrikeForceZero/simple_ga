@@ -4,6 +4,7 @@ use rand::thread_rng;
 
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
+use crate::ga::WeightedAction;
 use crate::util::{coin_flip, Odds};
 
 #[derive(Derivative, Clone, Default)]
@@ -12,11 +13,11 @@ pub struct ApplyMutationOptions<Mutator> {
     pub overall_mutation_chance: Odds,
     /// - `true`: allows each mutation defined to be applied when `P(A∩B)`
     ///     - A: `overall_mutation_chance`
-    ///     - B: `Odds` for a given `mutation_chance_tuples` entry
-    /// - `false`: random mutation is selected from `mutation_chance_tuples` based on its Weight (`Odds`)
+    ///     - B: `Odds` for a given `mutation_actions` entry
+    /// - `false`: random mutation is selected from `mutation_actions` based on its Weight (`Odds`)
     pub multi_mutation: bool,
     #[derivative(Debug = "ignore")]
-    pub mutation_chance_tuples: Vec<(Mutator, Odds)>,
+    pub mutation_actions: Vec<WeightedAction<Mutator>>,
     pub clone_on_mutation: bool,
 }
 
@@ -48,24 +49,24 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
             }
         };
         if options.multi_mutation {
-            for (mutator, odds) in options.mutation_chance_tuples.iter() {
-                if !coin_flip(&mut rng, *odds) {
+            for weighted_action in options.mutation_actions.iter() {
+                if !coin_flip(&mut rng, weighted_action.weight) {
                     continue;
                 }
-                do_mutation(mutator);
+                do_mutation(&weighted_action.action);
             }
         } else {
             let weights: Vec<f64> = options
-                .mutation_chance_tuples
+                .mutation_actions
                 .iter()
-                .map(|&(_, weight)| weight)
+                .map(|weighted_action| weighted_action.weight)
                 .collect();
             if weights.is_empty() {
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
             let index = dist.sample(&mut rng);
-            do_mutation(&options.mutation_chance_tuples[index].0);
+            do_mutation(&options.mutation_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);
