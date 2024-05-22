@@ -19,3 +19,6 @@ itertools = "0.13"
 tracing = { version = "0.1", features = ["log"] }
 derivative = "2.2"
 statrs = "0.16"
+
+[[example]]
+name = "pi"
