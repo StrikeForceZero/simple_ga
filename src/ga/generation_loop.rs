@@ -60,7 +60,7 @@ pub fn generation_loop<
     loop {
         generation_ix += 1;
         if generation_ix % 100000000 == 0 {
-            info!("generation: {}", generation_ix);
+            info!("generation: {generation_ix}");
         }
         state.population.sort();
         let mut is_reverse_mode = false;
@@ -74,10 +74,8 @@ pub fn generation_loop<
                 || !is_reverse_mode && subject.fitness() < current_fitness;
             if fitness_will_update {
                 current_fitness = subject.fitness();
-                info!(
-                    "generation: {}, fitness: {}/{}",
-                    generation_ix, current_fitness, options.target_fitness
-                );
+                let target_fitness = options.target_fitness;
+                info!("generation: {generation_ix}, fitness: {current_fitness}/{target_fitness}");
                 (options.debug_print)(&subject.subject())
             }
             if subject.fitness() >= options.max_fitness
