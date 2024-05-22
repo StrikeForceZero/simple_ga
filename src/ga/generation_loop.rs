@@ -54,7 +54,7 @@ pub fn generation_loop<
 ) {
     #[cfg(test)]
     {
-        crate::util::debug_tracing::init_tracing();
+        simple_ga_internal_lib::tracing::init_tracing();
     }
     let mut rng = thread_rng();
     let mut generation_ix = 0;

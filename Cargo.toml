@@ -4,8 +4,11 @@ version = "0.0.0"
 edition = "2021"
 authors = ["Brett Striker <strikeforcezero@gmail.com>"]
 
+[workspace]
+members = ["crates/*"]
+
 [dev-dependencies]
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+simple_ga_internal_lib = { path = "crates/simple_ga_internal_lib" }
 rstest = "0.19"
 
 [dependencies]

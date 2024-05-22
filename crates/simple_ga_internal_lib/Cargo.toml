@@ -1,0 +1,8 @@
+[package]
+name = "simple_ga_internal_lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
