@@ -32,10 +32,6 @@ impl Bias {
     }
 }
 
-fn extract_first_decimal(num: f64) -> u8 {
-    ((f64::abs(num) * 10.0) % 10.0) as u8
-}
-
 fn bias_value(x: f64, bias: Bias) -> f64 {
     let b = 3f64;
     match bias {
