@@ -94,18 +94,18 @@ pub fn generation_loop<
         apply_mutations(&mut state.population, &options.mutation_options);
         if options.remove_duplicates {
             let mut indexes_to_delete: HashSet<usize> = HashSet::new();
-            for (ix, wrapped_subject) in state.population.subjects.iter().enumerate() {
-                if indexes_to_delete.contains(&ix) {
+            for (a_ix, a_subject) in state.population.subjects.iter().enumerate() {
+                if indexes_to_delete.contains(&a_ix) {
                     continue;
                 }
-                for (ix2, wrapped_subject2) in state.population.subjects.iter().enumerate() {
-                    if ix == ix2 || indexes_to_delete.contains(&ix2) {
+                for (b_ix, b_subject) in state.population.subjects.iter().enumerate() {
+                    if a_ix == b_ix || indexes_to_delete.contains(&b_ix) {
                         continue;
                     }
-                    if wrapped_subject2.fitness() == wrapped_subject.fitness()
-                        && wrapped_subject2.subject() == wrapped_subject.subject()
+                    if b_subject.fitness() == a_subject.fitness()
+                        && b_subject.subject() == a_subject.subject()
                     {
-                        indexes_to_delete.insert(ix2);
+                        indexes_to_delete.insert(b_ix);
                     }
                 }
             }
