@@ -1,4 +1,3 @@
-use itertools::traits::IteratorIndex;
 use rand::Rng;
 use rand::rngs::ThreadRng;
 
