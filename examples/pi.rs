@@ -223,6 +223,7 @@ fn main() {
         fitness_range: 0f64..target_fitness,
         mutation_options: ApplyMutationOptions {
             clone_on_mutation: false,
+            multi_mutation: false,
             overall_mutation_chance: 0.10,
             mutation_chance_tuples: vec![
                 (MutatorFns::AddRandomPosOne, 0.75),
