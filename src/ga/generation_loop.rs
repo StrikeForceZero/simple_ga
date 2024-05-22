@@ -8,6 +8,7 @@ use derivative::Derivative;
 use itertools::Itertools;
 use rand::thread_rng;
 use tracing::info;
+use tracing::log::debug;
 
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::mutation::{apply_mutations, ApplyMutation, ApplyMutationOptions};
@@ -58,17 +59,20 @@ pub fn generation_loop<
     }
     let mut rng = thread_rng();
     let mut generation_ix = 0;
-    let mut current_fitness = options.fitness_initial_to_target_range.start;
     let initial_fitness = options.fitness_initial_to_target_range.start;
+    let mut current_fitness = initial_fitness;
     let target_fitness = options.fitness_initial_to_target_range.end;
+    let mut is_reverse_mode = false;
     loop {
         generation_ix += 1;
         if generation_ix % options.log_on_mod_zero_for_generation_ix == 0 {
             info!("generation: {generation_ix}");
         }
         state.population.sort();
-        let mut is_reverse_mode = false;
         if initial_fitness < target_fitness {
+            if !is_reverse_mode {
+                debug!("enabling reverse mode");
+            }
             state.population.subjects.reverse();
             is_reverse_mode = true;
         }
@@ -81,9 +85,18 @@ pub fn generation_loop<
                 info!("generation: {generation_ix}, fitness: {current_fitness}/{target_fitness}");
                 (options.debug_print)(&subject.subject())
             }
-            if options.fitness_range.contains(&subject.fitness())
-                || target_fitness == subject.fitness()
-            {
+            if !options.fitness_range.contains(&subject.fitness()) {
+                debug!(
+                    "outside of fitness range: {}..{} ({})",
+                    options.fitness_range.start,
+                    options.fitness_range.end,
+                    subject.fitness()
+                );
+                (options.debug_print)(&subject.subject());
+                return;
+            }
+            if target_fitness == subject.fitness() {
+                debug!("target fitness reached: {target_fitness}");
                 (options.debug_print)(&subject.subject());
                 return;
             }
