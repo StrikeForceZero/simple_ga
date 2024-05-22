@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
-use rand::{random, Rng};
+use rand::{random, Rng, thread_rng};
 use tracing::info;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions};
@@ -65,11 +65,22 @@ impl Fit<Fitness> for Subject {
     }
 }
 
+fn random_pos_add(input: f64, pos: usize, amount: i8) -> f64 {
+    let sign = if amount.is_negative() { "-" } else { "" };
+    let amount = amount.abs();
+    format!("{sign}0.{amount:0>pos$}")
+        .parse::<f64>()
+        .expect("failed to generate f64")
+        + input
+}
+
 enum MutatorFns {
     AddOne,
     SubOne,
     AddRandom,
     SubRandom,
+    AddRandomPosOne,
+    SubRandomPosOne,
     Truncate,
     RandTruncate,
 }
@@ -84,9 +95,15 @@ impl ApplyMutation for MutatorFns {
             MutatorFns::SubOne => subject_f64 - 1.0,
             MutatorFns::AddRandom => subject_f64 + random_f64(),
             MutatorFns::SubRandom => subject_f64 - random_f64(),
+            MutatorFns::AddRandomPosOne => {
+                random_pos_add(subject_f64, thread_rng().gen_range(0..16), 1)
+            }
+            MutatorFns::SubRandomPosOne => {
+                random_pos_add(subject_f64, thread_rng().gen_range(0..16), -1)
+            }
             MutatorFns::Truncate => subject_f64.trunc(),
             MutatorFns::RandTruncate => {
-                let offset = rand::thread_rng().gen_range(1..=6) as f64;
+                let offset = thread_rng().gen_range(1..=6) as f64;
                 (subject_f64 * offset).trunc() / offset
             }
         };
@@ -208,12 +225,14 @@ fn main() {
             clone_on_mutation: false,
             overall_mutation_chance: 0.10,
             mutation_chance_tuples: vec![
-                (MutatorFns::AddOne, 0.25),
-                (MutatorFns::SubOne, 0.25),
-                (MutatorFns::AddRandom, 0.75),
-                (MutatorFns::SubRandom, 0.75),
+                (MutatorFns::AddRandomPosOne, 0.75),
+                (MutatorFns::SubRandomPosOne, 0.75),
                 (MutatorFns::Truncate, 0.05),
                 (MutatorFns::RandTruncate, 0.2),
+                (MutatorFns::AddRandom, 0.75),
+                (MutatorFns::SubRandom, 0.75),
+                (MutatorFns::AddOne, 0.25),
+                (MutatorFns::SubOne, 0.25),
             ],
         },
         reproduction_options: ApplyReproductionOptions {
@@ -242,4 +261,32 @@ fn main() {
     info!("starting generation loop");
     generation_loop(&generation_loop_options, &mut generation_loop_state);
     info!("done")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[rstest::rstest(initial, pos, amount, expected_len, expected_result,
+        case::zero(0.0, 0, 0, 1, 0e-1),
+        case::one(0.0, 1, 1, 3, 1e-1),
+        case::five_five(0.5, 1, 5, 1, 1e-0),
+        case::neg_one(0.0, 1, -1, 3, -1e-1),
+        case::ten(0.0, 10, 1, 12, 1e-10),
+        case::fifteen(0.0, 15, 1, 17, 1e-15),
+        case::sixteen(0.0, 16, 1, 18, 1e-16),
+        case::seventeen(0.0, 20, 1, 22, 1e-20),
+        case::seventeen(0.0, 50, 1, 52, 1e-50),
+    )]
+    fn test_random_pos_add(
+        initial: f64,
+        pos: usize,
+        amount: i8,
+        expected_len: usize,
+        expected_result: f64,
+    ) {
+        let result = random_pos_add(initial, pos, amount);
+        assert_eq!(result, expected_result);
+        assert_eq!(result.abs().to_string().len(), expected_len);
+    }
 }
