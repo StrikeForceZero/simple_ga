@@ -19,8 +19,8 @@ use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyRepro
 #[derivative(Debug)]
 pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,
-    pub starting_fitness: Fitness,
-    pub target_fitness: Fitness,
+    /// initial fitness to target fitness
+    pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
     pub mutation_options: ApplyMutationOptions<Mutator>,
@@ -58,7 +58,9 @@ pub fn generation_loop<
     }
     let mut rng = thread_rng();
     let mut generation_ix = 0;
-    let mut current_fitness = options.starting_fitness;
+    let mut current_fitness = options.fitness_initial_to_target_range.start;
+    let initial_fitness = options.fitness_initial_to_target_range.start;
+    let target_fitness = options.fitness_initial_to_target_range.end;
     loop {
         generation_ix += 1;
         if generation_ix % options.log_on_mod_zero_for_generation_ix == 0 {
@@ -66,7 +68,7 @@ pub fn generation_loop<
         }
         state.population.sort();
         let mut is_reverse_mode = false;
-        if options.starting_fitness < options.target_fitness {
+        if initial_fitness < target_fitness {
             state.population.subjects.reverse();
             is_reverse_mode = true;
         }
@@ -76,12 +78,11 @@ pub fn generation_loop<
                 || !is_reverse_mode && subject.fitness() < current_fitness;
             if fitness_will_update {
                 current_fitness = subject.fitness();
-                let target_fitness = options.target_fitness;
                 info!("generation: {generation_ix}, fitness: {current_fitness}/{target_fitness}");
                 (options.debug_print)(&subject.subject())
             }
             if options.fitness_range.contains(&subject.fitness())
-                || options.target_fitness == subject.fitness()
+                || target_fitness == subject.fitness()
             {
                 (options.debug_print)(&subject.subject());
                 return;
