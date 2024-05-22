@@ -55,12 +55,12 @@ pub fn generation_loop<
         crate::util::debug_tracing::init_tracing();
     }
     let mut rng = thread_rng();
-    let mut ix = 0;
+    let mut generation_ix = 0;
     let mut current_fitness = options.starting_fitness;
     loop {
-        ix += 1;
-        if ix % 100000000 == 0 {
-            info!("generation: {}", ix);
+        generation_ix += 1;
+        if generation_ix % 100000000 == 0 {
+            info!("generation: {}", generation_ix);
         }
         state.population.sort();
         let mut is_reverse_mode = false;
@@ -76,7 +76,7 @@ pub fn generation_loop<
                 current_fitness = subject.fitness();
                 info!(
                     "generation: {}, fitness: {}/{}",
-                    ix, current_fitness, options.target_fitness
+                    generation_ix, current_fitness, options.target_fitness
                 );
                 (options.debug_print)(&subject.subject())
             }
