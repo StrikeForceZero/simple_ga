@@ -6,7 +6,7 @@ use tracing::info;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::generation_loop::{generation_loop, GenerationLoopOptions, GenerationLoopState};
+use simple_ga::ga::ga_runner::{generation_loop, GenerationLoopOptions, GenerationLoopState};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,

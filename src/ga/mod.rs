@@ -8,7 +8,7 @@ use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::util::Odds;
 
 pub mod fitness;
-pub mod generation_loop;
+pub mod ga_runner;
 pub mod mutation;
 pub mod population;
 pub mod probability;
