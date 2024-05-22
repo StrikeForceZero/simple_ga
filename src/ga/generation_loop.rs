@@ -14,7 +14,7 @@ use crate::ga::population::Population;
 use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction, ApplyReproductionOptions};
 
-#[derive(Derivative, Clone)]
+#[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub remove_duplicates: bool,

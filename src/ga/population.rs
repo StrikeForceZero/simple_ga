@@ -10,7 +10,7 @@ use crate::ga::prune::PruneRandom;
 use crate::ga::select::{SelectRandom, SelectRandomManyWithBias};
 use crate::util::Bias;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Population<Subject> {
     pub pool_size: usize,
     pub subjects: Vec<FitnessWrapped<Subject>>,

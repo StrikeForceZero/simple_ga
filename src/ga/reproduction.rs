@@ -12,7 +12,7 @@ pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
     subject.clone()
 }
 
-#[derive(Derivative, Clone)]
+#[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer> {
     pub reproduction_limit: usize,
