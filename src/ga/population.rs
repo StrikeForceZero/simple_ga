@@ -44,6 +44,13 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     ) {
         pruner.prune_random(&mut self.subjects, rng);
     }
+    pub fn select_random<'a, S>(&'a self, rng: &mut ThreadRng, selector: S) -> S::Output
+    where
+        S: SelectRandom<&'a FitnessWrapped<Subject>>,
+        Subject: 'a,
+    {
+        selector.select_random(rng, &self.subjects)
+    }
     pub fn select_front_bias_random(
         &self,
         rng: &mut ThreadRng,
