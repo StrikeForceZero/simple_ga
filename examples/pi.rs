@@ -238,6 +238,7 @@ fn main() {
         },
         reproduction_options: ApplyReproductionOptions {
             reproduction_limit: population_size / 10,
+            multi_reproduction: false,
             overall_reproduction_chance: 1.0,
             reproduction_chance_tuples: vec![
                 (ReproductionFns::SexualHalf, 0.50),
