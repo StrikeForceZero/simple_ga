@@ -26,6 +26,7 @@ pub struct GenerationLoopOptions<Mutator, Reproducer, Debug> {
     pub reproduction_options: ApplyReproductionOptions<Reproducer>,
     #[derivative(Debug = "ignore")]
     pub debug_print: Debug,
+    pub log_on_mod_zero_for_generation_ix: usize,
 }
 
 #[derive(Clone)]
@@ -59,7 +60,7 @@ pub fn generation_loop<
     let mut current_fitness = options.starting_fitness;
     loop {
         generation_ix += 1;
-        if generation_ix % 100000000 == 0 {
+        if generation_ix % options.log_on_mod_zero_for_generation_ix == 0 {
             info!("generation: {generation_ix}");
         }
         state.population.sort();
