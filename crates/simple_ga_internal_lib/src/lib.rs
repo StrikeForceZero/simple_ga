@@ -19,3 +19,20 @@ pub mod tracing {
         })
     }
 }
+
+pub mod test_rng {
+    use rand::prelude::StdRng;
+    use rand::rngs::mock::StepRng;
+    use rand::SeedableRng;
+
+    pub fn custom_rng(initial: u64, increment: u64) -> StdRng {
+        match StdRng::from_rng(StepRng::new(initial, increment)) {
+            Ok(rng) => rng,
+            Err(err) => panic!("failed to create rng: {err}"),
+        }
+    }
+
+    pub fn rng() -> StdRng {
+        custom_rng(0, 1)
+    }
+}
