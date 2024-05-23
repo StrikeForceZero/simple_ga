@@ -1,9 +1,9 @@
-use rand::prelude::ThreadRng;
+use rand::Rng;
 
 use crate::util::{Bias, random_index_bias};
 
 pub trait PruneRandom<T> {
-    fn prune_random(self, items: &mut T, rng: &mut ThreadRng);
+    fn prune_random<RandNumGen: Rng>(self, items: &mut T, rng: &mut RandNumGen);
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -13,7 +13,7 @@ pub struct PruneSingleSkipFirst;
 impl<T> PruneRandom<Vec<T>> for PruneSingleSkipFirst {
     /// Will randomly remove a single item
     /// Skips the first entry
-    fn prune_random(self, items: &mut Vec<T>, rng: &mut ThreadRng) {
+    fn prune_random<RandNumGen: Rng>(self, items: &mut Vec<T>, rng: &mut RandNumGen) {
         let mut target_index = 0;
         while target_index == 0 {
             target_index = random_index_bias(rng, items.len(), Bias::Back);
@@ -42,7 +42,7 @@ impl PruneExtraSkipFirst {
 impl<T> PruneRandom<Vec<T>> for PruneExtraSkipFirst {
     /// Will randomly remove items until it reaches the desired length
     /// Skips the first entry
-    fn prune_random(self, items: &mut Vec<T>, rng: &mut ThreadRng) {
+    fn prune_random<RandNumGen: Rng>(self, items: &mut Vec<T>, rng: &mut RandNumGen) {
         while items.len() > self.max_length {
             PruneSingleSkipFirst.prune_random(items, rng);
         }

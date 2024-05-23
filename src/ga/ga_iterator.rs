@@ -1,19 +1,19 @@
-use derivative::Derivative;
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
+use derivative::Derivative;
 use itertools::Itertools;
-use rand::rngs::ThreadRng;
+use rand::Rng;
 use tracing::info;
 use tracing::log::debug;
 
 use crate::ga::fitness::{Fit, Fitness};
+use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction};
-use crate::ga::GeneticAlgorithmOptions;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -82,16 +82,18 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<'rng, Subject, Mutator, Reproducer> {
+pub struct GaIterator<'rng, RandNumGen, Subject, Mutator, Reproducer> {
     options: GeneticAlgorithmOptions<Mutator, Reproducer>,
     state: GaIterState<Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
-    rng: &'rng mut ThreadRng,
+    rng: &'rng mut RandNumGen,
 }
 
-impl<'rng, Subject, Mutator, Reproducer> GaIterator<'rng, Subject, Mutator, Reproducer>
+impl<'rng, RandNumGen, Subject, Mutator, Reproducer>
+    GaIterator<'rng, RandNumGen, Subject, Mutator, Reproducer>
 where
+    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
@@ -99,7 +101,7 @@ where
     pub fn new(
         options: GeneticAlgorithmOptions<Mutator, Reproducer>,
         mut state: GaIterState<Subject>,
-        rng: &'rng mut ThreadRng,
+        rng: &'rng mut RandNumGen,
     ) -> Self {
         Self {
             ga_iter_options: GaIterOptions::default(),
@@ -113,7 +115,7 @@ where
     pub fn new_with_options(
         options: GeneticAlgorithmOptions<Mutator, Reproducer>,
         state: GaIterState<Subject>,
-        rng: &'rng mut ThreadRng,
+        rng: &'rng mut RandNumGen,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
         let mut iter = Self::new(options, state, rng);

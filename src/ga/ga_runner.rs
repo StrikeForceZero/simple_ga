@@ -1,15 +1,15 @@
-use derivative::Derivative;
 use std::hash::Hash;
 
-use rand::prelude::ThreadRng;
+use derivative::Derivative;
+use rand::Rng;
 use tracing::info;
 
 use crate::ga::fitness::{Fit, Fitness};
-use crate::ga::ga_iterator::{GaIterOptions, GaIterState, GaIterator};
+use crate::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
+use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
 use crate::ga::reproduction::ApplyReproduction;
-use crate::ga::GeneticAlgorithmOptions;
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
@@ -19,19 +19,21 @@ pub struct GaRunnerOptions<Subject> {
     pub log_on_mod_zero_for_generation_ix: usize,
 }
 
-pub struct GaRunner<'rng, Subject>
+pub struct GaRunner<'rng, RandNumGen, Subject>
 where
+    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
 {
     runner_options: GaRunnerOptions<Subject>,
-    rng: &'rng mut ThreadRng,
+    rng: &'rng mut RandNumGen,
 }
 
-impl<'rng, Subject> GaRunner<'rng, Subject>
+impl<'rng, RandNumGen, Subject> GaRunner<'rng, RandNumGen, Subject>
 where
+    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
 {
-    pub fn new(runner_options: GaRunnerOptions<Subject>, rng: &'rng mut ThreadRng) -> Self {
+    pub fn new(runner_options: GaRunnerOptions<Subject>, rng: &'rng mut RandNumGen) -> Self {
         Self {
             runner_options,
             rng,
@@ -71,6 +73,7 @@ where
 }
 
 pub fn ga_runner<
+    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
@@ -78,7 +81,7 @@ pub fn ga_runner<
     ga_options: GeneticAlgorithmOptions<Mutator, Reproducer>,
     runner_options: GaRunnerOptions<Subject>,
     population: Population<Subject>,
-    rng: &mut ThreadRng,
+    rng: &mut RandNumGen,
 ) {
     GaRunner::new(runner_options, rng).run(ga_options, population);
 }

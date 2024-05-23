@@ -1,11 +1,10 @@
 use rand::Rng;
-use rand::rngs::ThreadRng;
 
 /// Type alias for all probability / random usages
 pub type Odds = f64;
 
 /// Performs a simple coin flip with specified odds of returning true
-pub fn coin_flip(rng: &mut ThreadRng, odds: Odds) -> bool {
+pub fn coin_flip<RandNumGen: Rng>(rng: &mut RandNumGen, odds: Odds) -> bool {
     debug_assert!(
         (0.0..=1.0).contains(&odds),
         "odds must be between 0.0 and 1.0 inclusively, got: {odds}"
@@ -59,7 +58,7 @@ fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
 }
 
 /// Returns a random index from 0-len with a given bias
-pub fn random_index_bias(rng: &mut ThreadRng, len: usize, bias: Bias) -> usize {
+pub fn random_index_bias<RandNumGen: Rng>(rng: &mut RandNumGen, len: usize, bias: Bias) -> usize {
     let x: f64 = rng.gen_range(0.0..1.0);
     _random_index_bias(x, len, bias)
 }

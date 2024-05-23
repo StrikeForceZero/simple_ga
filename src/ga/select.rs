@@ -1,18 +1,19 @@
 use std::collections::HashSet;
 
 use itertools::Itertools;
-use rand::prelude::ThreadRng;
+use rand::Rng;
 
 use crate::util::{Bias, random_index_bias};
 
 pub trait SelectRandom<T> {
     type Output;
     fn select_random<
+        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output;
 }
@@ -34,11 +35,12 @@ impl SelectRandomWithBias {
 impl<T> SelectRandom<T> for SelectRandomWithBias {
     type Output = Option<T>;
     fn select_random<
+        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output {
         let mut items = items.into_iter();
@@ -62,7 +64,11 @@ impl SelectRandomManyWithBias {
     pub fn bias(&self) -> &Bias {
         &self.bias
     }
-    fn select_random_indexes(&self, rng: &mut ThreadRng, len: usize) -> HashSet<usize> {
+    fn select_random_indexes<RandNumGen: Rng>(
+        &self,
+        rng: &mut RandNumGen,
+        len: usize,
+    ) -> HashSet<usize> {
         let max_amount = self.amount.min(len);
         // not enough items just return the original slice as a new vec
         if max_amount >= len {
@@ -83,12 +89,13 @@ impl SelectRandomManyWithBias {
         }
     }
     fn select_random<
+        RandNumGen: Rng,
         T,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         items: Iter,
     ) -> Vec<T> {
         let mut items = items.into_iter();
@@ -110,11 +117,12 @@ impl SelectRandomManyWithBias {
 impl<T> SelectRandom<T> for SelectRandomManyWithBias {
     type Output = Vec<T>;
     fn select_random<
+        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output {
         self.select_random(rng, items)

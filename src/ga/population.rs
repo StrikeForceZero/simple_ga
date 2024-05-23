@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use itertools::Itertools;
-use rand::prelude::ThreadRng;
+use rand::Rng;
 
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
@@ -37,30 +37,34 @@ impl<Subject: Display> Display for Population<Subject> {
 }
 
 impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
-    pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(
+    pub fn prune_random<RandNumGen: Rng, P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(
         &mut self,
         pruner: P,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
     ) {
         pruner.prune_random(&mut self.subjects, rng);
     }
-    pub fn select_random<'a, S>(&'a self, rng: &mut ThreadRng, selector: S) -> S::Output
-        where
-            S: SelectRandom<&'a FitnessWrapped<Subject>>,
-            Subject: 'a,
+    pub fn select_random<'a, RandNumGen: Rng, S>(
+        &'a self,
+        rng: &mut RandNumGen,
+        selector: S,
+    ) -> S::Output
+    where
+        S: SelectRandom<&'a FitnessWrapped<Subject>>,
+        Subject: 'a,
     {
         selector.select_random(rng, &self.subjects)
     }
-    pub fn select_front_bias_random(
+    pub fn select_front_bias_random<RandNumGen: Rng>(
         &self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         limit: usize,
     ) -> Vec<&FitnessWrapped<Subject>> {
         SelectRandomManyWithBias::new(limit, Bias::Front).select_random(rng, &self.subjects)
     }
-    pub fn select_back_bias_random(
+    pub fn select_back_bias_random<RandNumGen: Rng>(
         &self,
-        rng: &mut ThreadRng,
+        rng: &mut RandNumGen,
         limit: usize,
     ) -> Vec<&FitnessWrapped<Subject>> {
         SelectRandomManyWithBias::new(limit, Bias::Back).select_random(rng, &self.subjects)
@@ -77,19 +81,19 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
         self.subjects.push(subject);
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=&FitnessWrapped<Subject>> {
+    pub fn iter(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
         self.subjects.iter()
     }
 
-    pub fn iter_reverse(&self) -> impl Iterator<Item=&FitnessWrapped<Subject>> {
+    pub fn iter_reverse(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
         self.subjects.iter().rev()
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut FitnessWrapped<Subject>> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
         self.subjects.iter_mut()
     }
 
-    pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item=&mut FitnessWrapped<Subject>> {
+    pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
         self.subjects.iter_mut().rev()
     }
 }
