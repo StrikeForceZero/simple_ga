@@ -95,23 +95,25 @@ impl SudokuValidationResult {
 
 fn fitness_numerator(sudoku_validation_result: SudokuValidationResult) -> f64 {
     let aggregate = sudoku_validation_result.aggregate();
-    let correct = aggregate.correct as Fitness * CORRECT_WEIGHT;
-    let unknown = aggregate.unknown as Fitness * 0.5;
-    let wrong = aggregate.wrong as Fitness * 1.0;
 
-    (correct - unknown - wrong).max(0.0).min(FITNESS_DENOM)
+    let unknown = aggregate.unknown as Fitness * UNKNOWN_WEIGHT;
+    let wrong = aggregate.wrong as Fitness * WRONG_WEIGHT;
+
+    unknown + wrong
 }
 
 impl From<SudokuValidationResult> for Fitness {
     fn from(value: SudokuValidationResult) -> Self {
-        fitness_numerator(value) / FITNESS_DENOM
+        fitness_numerator(value)
     }
 }
 
-const CORRECT_WEIGHT: Fitness = 1.0;
 const TOTAL_SQUARES: usize = 81;
 const AGGREGATE_TOTAL: usize = TOTAL_SQUARES * 3;
-const FITNESS_DENOM: Fitness = (TOTAL_SQUARES * 3) as Fitness * CORRECT_WEIGHT;
+const UNKNOWN_WEIGHT: f64 = 1.0;
+const WRONG_WEIGHT: f64 = 10.0;
+const MAX_FITNESS: f64 = WRONG_WEIGHT * AGGREGATE_TOTAL as Fitness;
+const INITIAL_FITNESS: f64 = UNKNOWN_WEIGHT * AGGREGATE_TOTAL as Fitness;
 
 type BoardLikeGroup<T> = [T; 9];
 type BoardLikeData<T> = [BoardLikeGroup<T>; 9];
@@ -347,15 +349,15 @@ fn main() {
     let rng = &mut thread_rng();
     let population_size = 5000;
     simple_ga_internal_lib::tracing::init_tracing();
-    let target_fitness = 1.0;
+    let target_fitness = 0.0;
     fn debug_print(subject: &Board) {
         let fitness = subject.measure();
         println!("best:\n{}\n({fitness})", subject.full_display_string());
     }
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
-        fitness_initial_to_target_range: 0f64..target_fitness,
-        fitness_range: 0f64..target_fitness,
+        fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
+        fitness_range: target_fitness..MAX_FITNESS,
         mutation_options: ApplyMutationOptions {
             clone_on_mutation: false,
             multi_mutation: false,
@@ -482,9 +484,9 @@ mod tests {
 
     #[test]
     fn test_fitness() {
-        assert_eq!(Board::default().measure(), 0.0);
-        assert_eq!(CORRECT_BOARD.measure(), 1.0);
-        assert_eq!(SINGLE_UNKNOWN.measure(), 0.9814814814814815);
-        assert_eq!(SINGLE_WRONG.measure(), 0.9753086419753086);
+        assert_eq!(Board::default().measure(), INITIAL_FITNESS);
+        assert_eq!(CORRECT_BOARD.measure(), 0.0);
+        assert_eq!(SINGLE_UNKNOWN.measure(), 3.0);
+        assert_eq!(SINGLE_WRONG.measure(), 30.0);
     }
 }
