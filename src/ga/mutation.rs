@@ -23,7 +23,7 @@ pub struct ApplyMutationOptions<Mutator> {
 
 pub trait ApplyMutation {
     type Subject;
-    fn apply(&self, subject: &Self::Subject) -> Self::Subject;
+    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
@@ -37,9 +37,9 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
         if !coin_flip(rng, options.overall_mutation_chance) {
             continue;
         }
-        let mut do_mutation = |mutator: &Mutator| {
+        let mut do_mutation = |rng: &mut RandNumGen, mutator: &Mutator| {
             let subject = &wrapped_subject.subject();
-            let mutated_subject = mutator.apply(subject);
+            let mutated_subject = mutator.apply(rng, subject);
             let fitness = Mutator::fitness(&mutated_subject);
             let fw = FitnessWrapped::new(mutated_subject, fitness);
             if options.clone_on_mutation {
@@ -53,7 +53,7 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
                 if !coin_flip(rng, weighted_action.weight) {
                     continue;
                 }
-                do_mutation(&weighted_action.action);
+                do_mutation(rng, &weighted_action.action);
             }
         } else {
             let weights: Vec<f64> = options
@@ -66,7 +66,7 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
             let index = dist.sample(rng);
-            do_mutation(&options.mutation_actions[index].action);
+            do_mutation(rng, &options.mutation_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);

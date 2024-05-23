@@ -1,16 +1,16 @@
 use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
-use rand::{random, thread_rng, Rng};
+use rand::{random, Rng, thread_rng};
 use tracing::info;
 
+use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
-    asexual_reproduction, ApplyReproduction, ApplyReproductionOptions,
+    ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
 };
-use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();
@@ -88,22 +88,18 @@ enum MutatorFns {
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
 
-    fn apply(&self, subject: &Self::Subject) -> Self::Subject {
+    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject {
         let subject_f64 = subject.as_f64();
         let mutated_result = match self {
             MutatorFns::AddOne => subject_f64 + 1.0,
             MutatorFns::SubOne => subject_f64 - 1.0,
-            MutatorFns::AddRandom => subject_f64 + random_f64(),
-            MutatorFns::SubRandom => subject_f64 - random_f64(),
-            MutatorFns::AddRandomPosOne => {
-                random_pos_add(subject_f64, thread_rng().gen_range(0..16), 1)
-            }
-            MutatorFns::SubRandomPosOne => {
-                random_pos_add(subject_f64, thread_rng().gen_range(0..16), -1)
-            }
+            MutatorFns::AddRandom => subject_f64 + random_f64(rng),
+            MutatorFns::SubRandom => subject_f64 - random_f64(rng),
+            MutatorFns::AddRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), 1),
+            MutatorFns::SubRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), -1),
             MutatorFns::Truncate => subject_f64.trunc(),
             MutatorFns::RandTruncate => {
-                let offset = thread_rng().gen_range(1..=6) as f64;
+                let offset = rng.gen_range(1..=6) as f64;
                 (subject_f64 * offset).trunc() / offset
             }
         };
@@ -127,6 +123,7 @@ impl ApplyReproduction for ReproductionFns {
 
     fn apply(
         &self,
+        _rng: &mut impl Rng,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -203,11 +200,12 @@ impl ApplyReproduction for ReproductionFns {
     }
 }
 
-fn random_f64() -> f64 {
-    random::<f64>()
+fn random_f64(rng: &mut impl Rng) -> f64 {
+    rng.gen::<f64>()
 }
 
 fn main() {
+    let rng = &mut thread_rng();
     let population_size = 50000;
     simple_ga_internal_lib::tracing::init_tracing();
     let target_fitness = PI_STRING.len() as Fitness;
@@ -254,7 +252,7 @@ fn main() {
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
-    let create_subject_fn = Box::new(|| -> Subject { random_f64().into() });
+    let create_subject_fn = Box::new(|| -> Subject { random_f64(rng).into() });
 
     let population = create_population_pool(CreatePopulationOptions {
         population_size,
@@ -262,12 +260,7 @@ fn main() {
     });
 
     info!("starting generation loop");
-    ga_runner(
-        generation_loop_options,
-        ga_runner_options,
-        population,
-        &mut thread_rng(),
-    );
+    ga_runner(generation_loop_options, ga_runner_options, population, rng);
     info!("done")
 }
 

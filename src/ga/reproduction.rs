@@ -32,6 +32,7 @@ pub trait ApplyReproduction {
     type Subject: Hash + PartialEq + Eq;
     fn apply(
         &self,
+        rng: &mut impl Rng,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject);
@@ -55,8 +56,8 @@ pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
         }
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
 
-        let mut do_reproduction = |reproducer: &Reproducer| {
-            let (offspring_a, offspring_b) = reproducer.apply(subject_a, subject_b);
+        let mut do_reproduction = |rng: &mut RandNumGen, reproducer: &Reproducer| {
+            let (offspring_a, offspring_b) = reproducer.apply(rng, subject_a, subject_b);
             {
                 let fitness = Reproducer::fitness(&offspring_a);
                 appended_subjects.push(FitnessWrapped::new(offspring_a, fitness));
@@ -72,7 +73,7 @@ pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
                 if !coin_flip(rng, weighted_action.weight) {
                     continue;
                 }
-                do_reproduction(&weighted_action.action);
+                do_reproduction(rng, &weighted_action.action);
             }
         } else {
             let weights: Vec<f64> = options
@@ -85,7 +86,7 @@ pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
             let index = dist.sample(rng);
-            do_reproduction(&options.reproduction_actions[index].action);
+            do_reproduction(rng, &options.reproduction_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);
