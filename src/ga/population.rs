@@ -102,7 +102,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
 mod tests {
     use std::ops::Range;
 
-    use rand::thread_rng;
+    use simple_ga_internal_lib::test_rng::rng;
 
     use crate::ga::fitness::{Fitness, FitnessWrapped};
     use crate::ga::population::Population;
@@ -132,7 +132,7 @@ mod tests {
         let size = 3;
         let mut population = make_population(size);
         for n in 1..3 {
-            population.prune_random(PruneSingleSkipFirst, &mut thread_rng());
+            population.prune_random(PruneSingleSkipFirst, &mut rng());
             assert_eq!(population.subjects.len(), size - n);
         }
     }
@@ -141,10 +141,8 @@ mod tests {
     fn test_generic_select() {
         let population = make_population(2);
         for n in 0..=2 {
-            let selected = population.select_random(
-                &mut thread_rng(),
-                SelectRandomManyWithBias::new(n, Bias::Front),
-            );
+            let selected =
+                population.select_random(&mut rng(), SelectRandomManyWithBias::new(n, Bias::Front));
             assert_eq!(selected.len(), n);
         }
     }
@@ -153,7 +151,7 @@ mod tests {
     fn test_select_front() {
         let population = make_population(2);
         for n in 0..=2 {
-            let selected = population.select_front_bias_random(&mut thread_rng(), n);
+            let selected = population.select_front_bias_random(&mut rng(), n);
             assert_eq!(selected.len(), n);
         }
     }
@@ -162,7 +160,7 @@ mod tests {
     fn test_select_back() {
         let population = make_population(2);
         for n in 0..=2 {
-            let selected = population.select_back_bias_random(&mut thread_rng(), n);
+            let selected = population.select_back_bias_random(&mut rng(), n);
             assert_eq!(selected.len(), n);
         }
     }
