@@ -6,7 +6,7 @@ use tracing::info;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::{GaRunnerState, ga_runner};
+use simple_ga::ga::ga_runner::ga_runner;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
@@ -258,10 +258,8 @@ fn main() {
         create_subject_fn: create_subject_fn.clone(),
     });
 
-    let mut generation_loop_state = GaRunnerState { population };
-
     info!("starting generation loop");
-    ga_runner(&generation_loop_options, &mut generation_loop_state);
+    ga_runner(generation_loop_options, population, &mut thread_rng());
     info!("done")
 }
 
@@ -273,7 +271,7 @@ mod tests {
         case::zero(0.0, 0, 0, 1, 0e-1),
         case::one(0.0, 1, 1, 3, 1e-1),
         case::five_five(0.5, 1, 5, 1, 1e-0),
-        case::neg_one(0.0, 1, -1, 3, -1e-1),
+        case::neg_one(0.0, 1, - 1, 3, - 1e-1),
         case::ten(0.0, 10, 1, 12, 1e-10),
         case::fifteen(0.0, 15, 1, 17, 1e-15),
         case::sixteen(0.0, 16, 1, 18, 1e-16),

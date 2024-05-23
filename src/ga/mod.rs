@@ -1,10 +1,10 @@
 use std::hash::{Hash, Hasher};
+use std::ops::Range;
+use std::usize;
 
 use derivative::Derivative;
 
 use population::Population;
-use std::ops::Range;
-use std::usize;
 
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::mutation::ApplyMutationOptions;
@@ -20,6 +20,7 @@ pub mod prune;
 pub mod reproduction;
 pub mod select;
 pub mod subject;
+pub mod ga_iterator;
 
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
@@ -75,4 +76,13 @@ pub struct GeneticAlgorithmOptions<Mutator, Reproducer, Debug> {
     #[derivative(Debug = "ignore")]
     pub debug_print: Debug,
     pub log_on_mod_zero_for_generation_ix: usize,
+}
+
+impl<Mutator, Reproducer, Debug> GeneticAlgorithmOptions<Mutator, Reproducer, Debug> {
+    pub fn initial_fitness(&self) -> Fitness {
+        self.fitness_initial_to_target_range.start
+    }
+    pub fn target_fitness(&self) -> Fitness {
+        self.fitness_initial_to_target_range.end
+    }
 }

@@ -45,9 +45,9 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
         pruner.prune_random(&mut self.subjects, rng);
     }
     pub fn select_random<'a, S>(&'a self, rng: &mut ThreadRng, selector: S) -> S::Output
-    where
-        S: SelectRandom<&'a FitnessWrapped<Subject>>,
-        Subject: 'a,
+        where
+            S: SelectRandom<&'a FitnessWrapped<Subject>>,
+            Subject: 'a,
     {
         selector.select_random(rng, &self.subjects)
     }
@@ -69,8 +69,28 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
         let population = &mut self.subjects;
         population.sort_by(|a, b| a.fitness().partial_cmp(&b.fitness()).unwrap());
     }
+    pub fn sort_rev(&mut self) {
+        let population = &mut self.subjects;
+        population.sort_by(|a, b| b.fitness().partial_cmp(&a.fitness()).unwrap());
+    }
     pub fn add(&mut self, subject: FitnessWrapped<Subject>) {
         self.subjects.push(subject);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=&FitnessWrapped<Subject>> {
+        self.subjects.iter()
+    }
+
+    pub fn iter_reverse(&self) -> impl Iterator<Item=&FitnessWrapped<Subject>> {
+        self.subjects.iter().rev()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut FitnessWrapped<Subject>> {
+        self.subjects.iter_mut()
+    }
+
+    pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item=&mut FitnessWrapped<Subject>> {
+        self.subjects.iter_mut().rev()
     }
 }
 
