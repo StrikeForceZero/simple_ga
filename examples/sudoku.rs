@@ -352,16 +352,16 @@ fn main() {
     let target_fitness = 0.0;
     fn debug_print(subject: &Board) {
         let fitness = subject.measure();
-        println!("best:\n{}\n({fitness})", subject.full_display_string());
+        println!("best: ({fitness})\n{}", subject.full_display_string());
     }
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
         fitness_range: target_fitness..MAX_FITNESS,
         mutation_options: ApplyMutationOptions {
-            clone_on_mutation: false,
+            clone_on_mutation: true,
             multi_mutation: false,
-            overall_mutation_chance: 0.5,
+            overall_mutation_chance: 0.01,
             mutation_actions: vec![
                 (MutatorFn::RandomFill, 0.10).into(),
                 (MutatorFn::RotateRow, 0.25).into(),
@@ -388,6 +388,16 @@ fn main() {
             for row in board.0.iter_mut() {
                 for col in row.iter_mut() {
                     *col = rng.gen_range(1..=9);
+                }
+            }
+        } else if rng.gen_bool(0.75) {
+            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            for row in board.0.iter_mut() {
+                *row = FULL;
+                if rng.gen_bool(0.5) {
+                    row.rotate_left(rng.gen_range(0..9));
+                } else {
+                    row.rotate_left(rng.gen_range(0..9));
                 }
             }
         }
