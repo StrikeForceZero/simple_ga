@@ -12,6 +12,7 @@ use crate::ga::reproduction::ApplyReproductionOptions;
 use crate::util::Odds;
 
 pub mod fitness;
+pub mod ga_iterator;
 pub mod ga_runner;
 pub mod mutation;
 pub mod population;
@@ -20,7 +21,6 @@ pub mod prune;
 pub mod reproduction;
 pub mod select;
 pub mod subject;
-pub mod ga_iterator;
 
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
@@ -65,7 +65,7 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<Mutator, Reproducer, Debug> {
+pub struct GeneticAlgorithmOptions<Mutator, Reproducer> {
     pub remove_duplicates: bool,
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
@@ -73,12 +73,9 @@ pub struct GeneticAlgorithmOptions<Mutator, Reproducer, Debug> {
     pub fitness_range: Range<Fitness>,
     pub mutation_options: ApplyMutationOptions<Mutator>,
     pub reproduction_options: ApplyReproductionOptions<Reproducer>,
-    #[derivative(Debug = "ignore")]
-    pub debug_print: Debug,
-    pub log_on_mod_zero_for_generation_ix: usize,
 }
 
-impl<Mutator, Reproducer, Debug> GeneticAlgorithmOptions<Mutator, Reproducer, Debug> {
+impl<Mutator, Reproducer> GeneticAlgorithmOptions<Mutator, Reproducer> {
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
     }

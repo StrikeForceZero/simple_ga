@@ -1,16 +1,16 @@
 use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
-use rand::{random, Rng, thread_rng};
+use rand::{random, thread_rng, Rng};
 use tracing::info;
 
-use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::ga_runner;
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
-    ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
+    asexual_reproduction, ApplyReproduction, ApplyReproductionOptions,
 };
+use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();
@@ -247,7 +247,10 @@ fn main() {
                 (ReproductionFns::ZipDecimal, 0.60).into(),
             ],
         },
-        debug_print,
+    };
+
+    let ga_runner_options = GaRunnerOptions {
+        debug_print: Some(debug_print),
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
@@ -259,7 +262,12 @@ fn main() {
     });
 
     info!("starting generation loop");
-    ga_runner(generation_loop_options, population, &mut thread_rng());
+    ga_runner(
+        generation_loop_options,
+        ga_runner_options,
+        population,
+        &mut thread_rng(),
+    );
     info!("done")
 }
 
