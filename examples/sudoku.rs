@@ -1,0 +1,490 @@
+use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
+
+use itertools::Group;
+use rand::{Rng, thread_rng};
+use rand::prelude::{IteratorRandom, SliceRandom};
+use tracing::info;
+
+use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
+use simple_ga::ga::fitness::{Fit, Fitness};
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
+use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
+use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
+
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+struct SudokuValidationGroup {
+    correct: usize,
+    wrong: usize,
+    unknown: usize,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+struct SudokuValidationResult {
+    columns: SudokuValidationGroup,
+    rows: SudokuValidationGroup,
+    sub_grids: SudokuValidationGroup,
+}
+
+impl SudokuValidationResult {
+    fn aggregate(&self) -> SudokuValidationGroup {
+        SudokuValidationGroup {
+            correct: self.columns.correct + self.rows.correct + self.sub_grids.correct,
+            wrong: self.columns.wrong + self.rows.wrong + self.sub_grids.wrong,
+            unknown: self.columns.unknown + self.rows.unknown + self.sub_grids.unknown,
+        }
+    }
+    fn validate(board: BoardData) -> Self {
+        let mut result = SudokuValidationResult::default();
+
+        fn is_valid_group(group: &[u8; 9]) -> SudokuValidationGroup {
+            let mut seen = HashSet::new();
+            let mut validation_group = SudokuValidationGroup::default();
+
+            for &num in group {
+                if num == 0 {
+                    validation_group.unknown += 1;
+                } else if (1..=9).contains(&num) && seen.insert(num) {
+                    validation_group.correct += 1;
+                } else {
+                    validation_group.wrong += 1;
+                }
+            }
+            validation_group
+        }
+
+        // Check rows
+        for row in &board {
+            let validation_group = is_valid_group(row);
+            result.rows.correct += validation_group.correct;
+            result.rows.wrong += validation_group.wrong;
+            result.rows.unknown += validation_group.unknown;
+        }
+
+        // Check columns
+        for col in 0..9 {
+            let mut column = [0; 9];
+            for row in 0..9 {
+                column[row] = board[row][col];
+            }
+            let validation_group = is_valid_group(&column);
+            result.columns.correct += validation_group.correct;
+            result.columns.wrong += validation_group.wrong;
+            result.columns.unknown += validation_group.unknown;
+        }
+
+        // Check 3x3 subgrids
+        for box_row in 0..3 {
+            for box_col in 0..3 {
+                let mut subgrid = [0; 9];
+                for row in 0..3 {
+                    for col in 0..3 {
+                        subgrid[row * 3 + col] = board[box_row * 3 + row][box_col * 3 + col];
+                    }
+                }
+                let validation_group = is_valid_group(&subgrid);
+                result.sub_grids.correct += validation_group.correct;
+                result.sub_grids.wrong += validation_group.wrong;
+                result.sub_grids.unknown += validation_group.unknown;
+            }
+        }
+
+        result
+    }
+}
+
+fn fitness_numerator(sudoku_validation_result: SudokuValidationResult) -> f64 {
+    let aggregate = sudoku_validation_result.aggregate();
+    let correct = aggregate.correct as Fitness * CORRECT_WEIGHT;
+    let unknown = aggregate.unknown as Fitness * 0.5;
+    let wrong = aggregate.wrong as Fitness * 1.0;
+
+    (correct - unknown - wrong).max(0.0).min(FITNESS_DENOM)
+}
+
+impl From<SudokuValidationResult> for Fitness {
+    fn from(value: SudokuValidationResult) -> Self {
+        fitness_numerator(value) / FITNESS_DENOM
+    }
+}
+
+const CORRECT_WEIGHT: Fitness = 1.0;
+const TOTAL_SQUARES: usize = 81;
+const AGGREGATE_TOTAL: usize = TOTAL_SQUARES * 3;
+const FITNESS_DENOM: Fitness = (TOTAL_SQUARES * 3) as Fitness * CORRECT_WEIGHT;
+
+type BoardLikeGroup<T> = [T; 9];
+type BoardLikeData<T> = [BoardLikeGroup<T>; 9];
+type BoardData = BoardLikeData<u8>;
+
+#[derive(Default, Clone, PartialEq, Eq, Hash)]
+struct Board(BoardData);
+
+impl Board {
+    fn validate(&self) -> SudokuValidationResult {
+        SudokuValidationResult::validate(self.0)
+    }
+    fn validation_display_string(&self) -> String {
+        #[derive(Default)]
+        struct Pos {
+            row_ix: usize,
+            col_ix: usize,
+        }
+
+        impl Pos {
+            fn new(row_ix: usize, col_ix: usize) -> Self {
+                Pos { row_ix, col_ix }
+            }
+        }
+
+        #[derive(Default)]
+        struct RemappedBoardCell {
+            pos: Pos,
+            cell: u8,
+        }
+
+        impl RemappedBoardCell {
+            fn new(pos: Pos, cell: u8) -> Self {
+                RemappedBoardCell { pos, cell }
+            }
+        }
+
+        let mut invalids = BoardLikeData::<bool>::default();
+
+        let mut mark_invalid = |group: BoardLikeGroup<RemappedBoardCell>| {
+            let mut seen = HashSet::new();
+            for RemappedBoardCell { pos, cell } in group.iter() {
+                if (1..=9).contains(cell) && seen.insert(*cell) {
+                } else {
+                    invalids[pos.row_ix][pos.col_ix] = true;
+                }
+            }
+        };
+
+        for (row_ix, row) in self.0.iter().enumerate() {
+            let mut remapped_row = BoardLikeGroup::<RemappedBoardCell>::default();
+            for (col_ix, col) in row.iter().enumerate() {
+                remapped_row[col_ix] = RemappedBoardCell::new(Pos::new(row_ix, col_ix), *col);
+            }
+            mark_invalid(remapped_row);
+        }
+        for col in 0..9 {
+            let mut column = BoardLikeGroup::<RemappedBoardCell>::default();
+            for row in 0..9 {
+                column[row] = RemappedBoardCell::new(Pos::new(row, col), self.0[row][col]);
+            }
+            mark_invalid(column)
+        }
+        let mut output = String::new();
+        for row in invalids {
+            for col in row {
+                output.push_str(if col { "[X]" } else { "[ ]" })
+            }
+            output.push_str("\n");
+        }
+        output
+    }
+
+    fn full_display_string(&self) -> String {
+        let display_string = self.to_string();
+        let validation_display_string = self.validation_display_string();
+        let mut output = String::new();
+        for (left, right) in display_string
+            .lines()
+            .zip(validation_display_string.lines())
+        {
+            output.push_str(&format!("{left}   {right}\n"))
+        }
+        output
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for row in self.0.iter() {
+            for col in row.iter() {
+                write!(f, "[{col}]")?;
+            }
+            writeln!(f, "")?;
+        }
+        write!(f, "")
+    }
+}
+
+impl From<Board> for BoardData {
+    fn from(value: Board) -> Self {
+        value.0
+    }
+}
+
+impl<'a> From<&'a Board> for &'a BoardData {
+    fn from(value: &'a Board) -> Self {
+        &value.0
+    }
+}
+
+impl Fit<Fitness> for Board {
+    fn measure(&self) -> Fitness {
+        SudokuValidationResult::validate(self.0).into()
+    }
+}
+
+enum MutatorFn {
+    RotateRow,
+    RandomFill,
+    RandomOverwrite,
+}
+
+impl ApplyMutation for MutatorFn {
+    type Subject = Board;
+
+    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject {
+        let mut subject = subject.clone();
+        fn random_cell(
+            rng: &mut impl Rng,
+            subject: &Board,
+            predicate: impl Fn(u8) -> bool,
+        ) -> Option<(usize, usize, u8)> {
+            let cells = subject
+                .0
+                .iter()
+                .enumerate()
+                .flat_map(|(row_ix, row)| {
+                    row.iter()
+                        .enumerate()
+                        .map(move |(col_ix, col)| (row_ix, col_ix, *col))
+                })
+                .filter(|(_, _, col)| (&predicate)(*col));
+            cells.choose(rng)
+        };
+        match self {
+            Self::RotateRow => {
+                let Some(random_row) = subject.0.choose_mut(rng) else {
+                    unreachable!();
+                };
+                if rng.gen_bool(0.5) {
+                    random_row.rotate_left(1);
+                } else {
+                    random_row.rotate_right(1);
+                }
+                subject
+            }
+            Self::RandomFill => {
+                let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell == 0) else {
+                    return subject;
+                };
+                let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
+                else {
+                    unreachable!();
+                };
+                *random_cell = rng.gen_range(1..=9);
+                subject
+            }
+            Self::RandomOverwrite => {
+                let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell > 0) else {
+                    return subject;
+                };
+                let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
+                else {
+                    unreachable!();
+                };
+                *random_cell = rng.gen_range(1..=9);
+                subject
+            }
+        }
+    }
+
+    fn fitness(subject: &Self::Subject) -> Fitness {
+        subject.measure()
+    }
+}
+
+enum ReproductionFn {
+    RandomMix,
+}
+
+impl ApplyReproduction for ReproductionFn {
+    type Subject = Board;
+
+    fn apply(
+        &self,
+        rng: &mut impl Rng,
+        subject_a: &Self::Subject,
+        subject_b: &Self::Subject,
+    ) -> (Self::Subject, Self::Subject) {
+        match self {
+            Self::RandomMix => {
+                let mut new_a = BoardData::default();
+                let mut new_b = BoardData::default();
+                for (row_ix, (a, b)) in subject_a.0.iter().zip(subject_b.0.iter()).enumerate() {
+                    let (a, b) = a.iter().zip(b).enumerate().fold(
+                        ([0u8; 9], [0u8; 9]),
+                        |(mut a, mut b), (ix, (&a_val, &b_val))| {
+                            let (new_a_val, new_b_val) = if rng.gen_bool(0.5) {
+                                (a_val, b_val)
+                            } else {
+                                (b_val, a_val)
+                            };
+                            a[ix] = new_a_val;
+                            b[ix] = new_b_val;
+                            (a, b)
+                        },
+                    );
+                    new_a[row_ix] = a;
+                    new_b[row_ix] = b;
+                }
+                (Board(new_a), Board(new_b))
+            }
+        }
+    }
+
+    fn fitness(subject: &Self::Subject) -> Fitness {
+        subject.measure()
+    }
+}
+
+fn main() {
+    let rng = &mut thread_rng();
+    let population_size = 5000;
+    simple_ga_internal_lib::tracing::init_tracing();
+    let target_fitness = 1.0;
+    fn debug_print(subject: &Board) {
+        let fitness = subject.measure();
+        println!("best:\n{}\n({fitness})", subject.full_display_string());
+    }
+    let generation_loop_options = GeneticAlgorithmOptions {
+        remove_duplicates: false,
+        fitness_initial_to_target_range: 0f64..target_fitness,
+        fitness_range: 0f64..target_fitness,
+        mutation_options: ApplyMutationOptions {
+            clone_on_mutation: false,
+            multi_mutation: false,
+            overall_mutation_chance: 0.5,
+            mutation_actions: vec![
+                (MutatorFn::RandomFill, 0.10).into(),
+                (MutatorFn::RotateRow, 0.25).into(),
+                (MutatorFn::RandomOverwrite, 0.75).into(),
+            ],
+        },
+        reproduction_options: ApplyReproductionOptions {
+            reproduction_limit: (population_size as f32 * 0.3).round() as usize,
+            multi_reproduction: false,
+            overall_reproduction_chance: 0.90,
+            reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
+        },
+    };
+
+    let ga_runner_options = GaRunnerOptions {
+        debug_print: Some(debug_print),
+        log_on_mod_zero_for_generation_ix: 1000000,
+    };
+
+    let create_subject_fn = Box::new(|| {
+        let rng = &mut thread_rng();
+        let mut board = Board::default();
+        if rng.gen_bool(0.1) {
+            for row in board.0.iter_mut() {
+                for col in row.iter_mut() {
+                    *col = rng.gen_range(1..=9);
+                }
+            }
+        }
+        board
+    });
+
+    let population = create_population_pool(CreatePopulationOptions {
+        population_size,
+        create_subject_fn: create_subject_fn.clone(),
+    });
+
+    info!("starting generation loop");
+    ga_runner(generation_loop_options, ga_runner_options, population, rng);
+    info!("done")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CORRECT_BOARD: Board = Board([
+        [5, 3, 4, 6, 7, 8, 9, 1, 2],
+        [6, 7, 2, 1, 9, 5, 3, 4, 8],
+        [1, 9, 8, 3, 4, 2, 5, 6, 7],
+        [8, 5, 9, 7, 6, 1, 4, 2, 3],
+        [4, 2, 6, 8, 5, 3, 7, 9, 1],
+        [7, 1, 3, 9, 2, 4, 8, 5, 6],
+        [9, 6, 1, 5, 3, 7, 2, 8, 4],
+        [2, 8, 7, 4, 1, 9, 6, 3, 5],
+        [3, 4, 5, 2, 8, 6, 1, 7, 9],
+    ]);
+
+    const SINGLE_WRONG: Board = Board([
+        [3, 3, 4, 6, 7, 8, 9, 1, 2],
+        [6, 7, 2, 1, 9, 5, 3, 4, 8],
+        [1, 9, 8, 3, 4, 2, 5, 6, 7],
+        [8, 5, 9, 7, 6, 1, 4, 2, 3],
+        [4, 2, 6, 8, 5, 3, 7, 9, 1],
+        [7, 1, 3, 9, 2, 4, 8, 5, 6],
+        [9, 6, 1, 5, 3, 7, 2, 8, 4],
+        [2, 8, 7, 4, 1, 9, 6, 3, 5],
+        [3, 4, 5, 2, 8, 6, 1, 7, 9],
+    ]);
+
+    const SINGLE_UNKNOWN: Board = Board([
+        [0, 3, 4, 6, 7, 8, 9, 1, 2],
+        [6, 7, 2, 1, 9, 5, 3, 4, 8],
+        [1, 9, 8, 3, 4, 2, 5, 6, 7],
+        [8, 5, 9, 7, 6, 1, 4, 2, 3],
+        [4, 2, 6, 8, 5, 3, 7, 9, 1],
+        [7, 1, 3, 9, 2, 4, 8, 5, 6],
+        [9, 6, 1, 5, 3, 7, 2, 8, 4],
+        [2, 8, 7, 4, 1, 9, 6, 3, 5],
+        [3, 4, 5, 2, 8, 6, 1, 7, 9],
+    ]);
+
+    #[test]
+    fn test_validation() {
+        assert_eq!(
+            Board::default().validate().aggregate(),
+            SudokuValidationGroup {
+                unknown: TOTAL_SQUARES * 3,
+                ..Default::default()
+            }
+        );
+
+        assert_eq!(
+            CORRECT_BOARD.validate().aggregate(),
+            SudokuValidationGroup {
+                correct: TOTAL_SQUARES * 3,
+                ..Default::default()
+            }
+        );
+
+        assert_eq!(
+            SINGLE_WRONG.validate().aggregate(),
+            SudokuValidationGroup {
+                correct: TOTAL_SQUARES * 3 - 3,
+                wrong: 3,
+                ..Default::default()
+            }
+        );
+
+        assert_eq!(
+            SINGLE_UNKNOWN.validate().aggregate(),
+            SudokuValidationGroup {
+                correct: TOTAL_SQUARES * 3 - 3,
+                wrong: 0,
+                unknown: 1 * 3,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_fitness() {
+        assert_eq!(Board::default().measure(), 0.0);
+        assert_eq!(CORRECT_BOARD.measure(), 1.0);
+        assert_eq!(SINGLE_UNKNOWN.measure(), 0.9814814814814815);
+        assert_eq!(SINGLE_WRONG.measure(), 0.9753086419753086);
+    }
+}

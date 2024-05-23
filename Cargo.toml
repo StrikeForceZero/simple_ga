@@ -22,3 +22,6 @@ statrs = "0.16"
 
 [[example]]
 name = "pi"
+
+[[example]]
+name = "sudoku"
