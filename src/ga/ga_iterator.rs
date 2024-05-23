@@ -30,7 +30,7 @@ impl<Subject> Default for GaIterOptions<Subject> {
 
 pub struct GaIterState<Subject> {
     pub(crate) generation: usize,
-    pub(crate) current_fitness: Fitness,
+    pub(crate) current_fitness: Option<Fitness>,
     pub(crate) reverse_mode_enabled: Option<bool>,
     pub population: Population<Subject>,
 }
@@ -40,7 +40,7 @@ impl<Subject> GaIterState<Subject> {
         Self {
             population,
             generation: 0,
-            current_fitness: 0.0,
+            current_fitness: None,
             reverse_mode_enabled: None,
         }
     }
@@ -128,13 +128,14 @@ where
     }
 
     pub fn is_fitness_at_target(&self) -> bool {
-        self.options.target_fitness() == self.state.current_fitness
+        Some(self.options.target_fitness()) == self.state.current_fitness
     }
 
     pub fn is_fitness_within_range(&self) -> bool {
-        self.options
-            .fitness_range
-            .contains(&self.state.current_fitness)
+        let Some(current_fitness) = self.state.current_fitness else {
+            return true;
+        };
+        self.options.fitness_range.contains(&current_fitness)
     }
 
     pub fn debug_print(&self, subject: &Subject) {
@@ -156,11 +157,12 @@ where
         if let Some(wrapped_subject) = self.state.population.subjects.first() {
             let subject = wrapped_subject;
             let fitness_will_update = self.is_reverse_mode
-                && subject.fitness() > self.state.current_fitness
-                || !self.is_reverse_mode && subject.fitness() < self.state.current_fitness;
+                && subject.fitness() > self.state.current_fitness.unwrap_or(f64::MIN)
+                || !self.is_reverse_mode
+                    && subject.fitness() < self.state.current_fitness.unwrap_or(f64::MAX);
             if fitness_will_update {
-                self.state.current_fitness = subject.fitness();
-                info!("generation: {generation_ix}, fitness: {current_fitness}/{target_fitness}");
+                self.state.current_fitness = Some(subject.fitness());
+                info!("generation: {generation_ix}, fitness: {current_fitness:?}/{target_fitness}");
                 self.debug_print(&subject.subject())
             }
             if !self.options.fitness_range.contains(&subject.fitness()) {
@@ -215,6 +217,6 @@ where
                 self.state.population.subjects.remove(*ix);
             }
         }
-        Some(self.state.current_fitness)
+        self.state.current_fitness
     }
 }
