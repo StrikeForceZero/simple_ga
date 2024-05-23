@@ -3,7 +3,7 @@ use std::hash::Hash;
 use derivative::Derivative;
 use itertools::Itertools;
 use rand::distributions::{Distribution, WeightedIndex};
-use rand::thread_rng;
+use rand::Rng;
 
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
@@ -38,19 +38,19 @@ pub trait ApplyReproduction {
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_reproductions<Reproducer: ApplyReproduction>(
+pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
+    rng: &mut RandNumGen,
     population: &mut Population<Reproducer::Subject>,
     options: &ApplyReproductionOptions<Reproducer>,
 ) {
-    let mut rng = thread_rng();
     let mut appended_subjects = vec![];
     // TODO: we probably need criteria on who can reproduce with who
     for (subject_a, subject_b) in population
-        .select_front_bias_random(&mut rng, options.reproduction_limit)
+        .select_front_bias_random(rng, options.reproduction_limit)
         .iter()
         .tuple_windows()
     {
-        if !coin_flip(&mut rng, options.overall_reproduction_chance) {
+        if !coin_flip(rng, options.overall_reproduction_chance) {
             continue;
         }
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
@@ -69,7 +69,7 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
 
         if options.multi_reproduction {
             for weighted_action in options.reproduction_actions.iter() {
-                if !coin_flip(&mut rng, weighted_action.weight) {
+                if !coin_flip(rng, weighted_action.weight) {
                     continue;
                 }
                 do_reproduction(&weighted_action.action);
@@ -84,7 +84,7 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(&mut rng);
+            let index = dist.sample(rng);
             do_reproduction(&options.reproduction_actions[index].action);
         }
     }

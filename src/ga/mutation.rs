@@ -1,6 +1,6 @@
 use derivative::Derivative;
 use rand::distributions::{Distribution, WeightedIndex};
-use rand::thread_rng;
+use rand::Rng;
 
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
@@ -27,14 +27,14 @@ pub trait ApplyMutation {
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_mutations<Mutator: ApplyMutation>(
+pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
+    rng: &mut RandNumGen,
     population: &mut Population<Mutator::Subject>,
     options: &ApplyMutationOptions<Mutator>,
 ) {
-    let mut rng = thread_rng();
     let mut appended_subjects = vec![];
     for wrapped_subject in population.subjects.iter_mut() {
-        if !coin_flip(&mut rng, options.overall_mutation_chance) {
+        if !coin_flip(rng, options.overall_mutation_chance) {
             continue;
         }
         let mut do_mutation = |mutator: &Mutator| {
@@ -50,7 +50,7 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
         };
         if options.multi_mutation {
             for weighted_action in options.mutation_actions.iter() {
-                if !coin_flip(&mut rng, weighted_action.weight) {
+                if !coin_flip(rng, weighted_action.weight) {
                     continue;
                 }
                 do_mutation(&weighted_action.action);
@@ -65,7 +65,7 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(&mut rng);
+            let index = dist.sample(rng);
             do_mutation(&options.mutation_actions[index].action);
         }
     }

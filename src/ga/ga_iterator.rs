@@ -182,10 +182,15 @@ where
         PruneExtraSkipFirst::new(self.state.population.pool_size)
             .prune_random(&mut self.state.population.subjects, self.rng);
         apply_reproductions(
+            self.rng,
             &mut self.state.population,
             &self.options.reproduction_options,
         );
-        apply_mutations(&mut self.state.population, &self.options.mutation_options);
+        apply_mutations(
+            self.rng,
+            &mut self.state.population,
+            &self.options.mutation_options,
+        );
         if self.options.remove_duplicates {
             let mut indexes_to_delete: HashSet<usize> = HashSet::new();
             for (a_ix, a_subject) in self.state.population.subjects.iter().enumerate() {
