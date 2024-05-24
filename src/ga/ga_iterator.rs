@@ -8,7 +8,7 @@ use rand::Rng;
 use tracing::info;
 use tracing::log::debug;
 
-use crate::ga::fitness::{Fit, Fitness};
+use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
@@ -44,9 +44,13 @@ impl<Subject> GaIterState<Subject> {
             reverse_mode_enabled: None,
         }
     }
-    pub(crate) fn get_or_determine_reverse_mode_from_options<Mutator, Reproducer>(
+    pub(crate) fn get_or_determine_reverse_mode_from_options<
+        CreateSubjectFn,
+        Mutator,
+        Reproducer,
+    >(
         &self,
-        options: &GeneticAlgorithmOptions<Mutator, Reproducer>,
+        options: &GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -54,9 +58,9 @@ impl<Subject> GaIterState<Subject> {
             options.initial_fitness() < options.target_fitness()
         }
     }
-    pub(crate) fn get_or_init_reverse_mode_enabled<Mutator, Reproducer>(
+    pub(crate) fn get_or_init_reverse_mode_enabled<CreateSubjectFn, Mutator, Reproducer>(
         &mut self,
-        options: &GeneticAlgorithmOptions<Mutator, Reproducer>,
+        options: &GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -82,24 +86,25 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<'rng, RandNumGen, Subject, Mutator, Reproducer> {
-    options: GeneticAlgorithmOptions<Mutator, Reproducer>,
+pub struct GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer> {
+    options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
     state: GaIterState<Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
     rng: &'rng mut RandNumGen,
 }
 
-impl<'rng, RandNumGen, Subject, Mutator, Reproducer>
-    GaIterator<'rng, RandNumGen, Subject, Mutator, Reproducer>
+impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
+    GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
 where
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
+    CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
     pub fn new(
-        options: GeneticAlgorithmOptions<Mutator, Reproducer>,
+        options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
         mut state: GaIterState<Subject>,
         rng: &'rng mut RandNumGen,
     ) -> Self {
@@ -113,7 +118,7 @@ where
     }
 
     pub fn new_with_options(
-        options: GeneticAlgorithmOptions<Mutator, Reproducer>,
+        options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
         state: GaIterState<Subject>,
         rng: &'rng mut RandNumGen,
         ga_iter_options: GaIterOptions<Subject>,
@@ -181,7 +186,7 @@ where
                 return None;
             }
         }
-        PruneExtraSkipFirst::new(self.state.population.pool_size)
+        PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
             .prune_random(&mut self.state.population.subjects, self.rng);
         apply_reproductions(
             self.rng,
@@ -216,6 +221,10 @@ where
                 }
                 self.state.population.subjects.remove(*ix);
             }
+        }
+        while self.state.population.subjects.len() < self.state.population.pool_size {
+            let new_subject = (&self.options.create_subject_fn)(self.rng);
+            self.state.population.subjects.push(new_subject.into());
         }
         self.state.current_fitness
     }

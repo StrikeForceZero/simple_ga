@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use itertools::Group;
 use rand::{Rng, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
+use rand::rngs::ThreadRng;
 use tracing::info;
 use tracing::log::debug;
 
@@ -447,10 +448,35 @@ fn main() {
         let fitness = subject.measure();
         println!("best: ({fitness})\n{}", subject.full_display_string());
     }
+
+    let create_subject_fn = Box::new(|rng: &mut ThreadRng| {
+        let mut board = Board::default();
+        if rng.gen_bool(0.1) {
+            for row in board.0.iter_mut() {
+                for col in row.iter_mut() {
+                    *col = rng.gen_range(1..=9);
+                }
+            }
+        } else if rng.gen_bool(0.75) {
+            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            for row in board.0.iter_mut() {
+                *row = FULL;
+                if rng.gen_bool(0.5) {
+                    row.rotate_left(rng.gen_range(0..9));
+                } else {
+                    row.rotate_left(rng.gen_range(0..9));
+                }
+            }
+        }
+        board
+    });
+
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: true,
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
         fitness_range: target_fitness..MAX_FITNESS,
+        create_subject_fn: create_subject_fn.clone(),
+        cull_amount: (population_size as f32 * 0.33).round() as usize,
         mutation_options: ApplyMutationOptions {
             clone_on_mutation: true,
             multi_mutation: false,
@@ -474,33 +500,13 @@ fn main() {
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
-    let create_subject_fn = Box::new(|| {
-        let rng = &mut thread_rng();
-        let mut board = Board::default();
-        if rng.gen_bool(0.1) {
-            for row in board.0.iter_mut() {
-                for col in row.iter_mut() {
-                    *col = rng.gen_range(1..=9);
-                }
-            }
-        } else if rng.gen_bool(0.75) {
-            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            for row in board.0.iter_mut() {
-                *row = FULL;
-                if rng.gen_bool(0.5) {
-                    row.rotate_left(rng.gen_range(0..9));
-                } else {
-                    row.rotate_left(rng.gen_range(0..9));
-                }
-            }
-        }
-        board
-    });
-
-    let population = create_population_pool(CreatePopulationOptions {
-        population_size,
-        create_subject_fn: create_subject_fn.clone(),
-    });
+    let population = create_population_pool(
+        rng,
+        CreatePopulationOptions {
+            population_size,
+            create_subject_fn: create_subject_fn.clone(),
+        },
+    );
 
     info!("starting generation loop");
     ga_runner(generation_loop_options, ga_runner_options, population, rng);

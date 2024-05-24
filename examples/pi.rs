@@ -215,10 +215,15 @@ fn main() {
         println!("    :{:01$}^", " ", fitness as usize);
         println!("best: {subject} ({fitness})");
     }
+
+    let create_subject_fn = Box::new(|| -> Subject { random_f64(rng).into() });
+
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
+        create_subject_fn: create_subject_fn.clone(),
+        cull_amount: (population_size as f64 * 0.33).round() as usize,
         mutation_options: ApplyMutationOptions {
             clone_on_mutation: false,
             multi_mutation: false,
@@ -252,12 +257,13 @@ fn main() {
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
-    let create_subject_fn = Box::new(|| -> Subject { random_f64(rng).into() });
-
-    let population = create_population_pool(CreatePopulationOptions {
-        population_size,
-        create_subject_fn: create_subject_fn.clone(),
-    });
+    let population = create_population_pool(
+        rng,
+        CreatePopulationOptions {
+            population_size,
+            create_subject_fn: create_subject_fn.clone(),
+        },
+    );
 
     info!("starting generation loop");
     ga_runner(generation_loop_options, ga_runner_options, population, rng);

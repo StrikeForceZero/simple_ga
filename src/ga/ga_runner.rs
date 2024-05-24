@@ -39,11 +39,12 @@ where
             rng,
         }
     }
-    pub fn run<Mutator, Reproducer>(
+    pub fn run<CreateSubjectFn, Mutator, Reproducer>(
         &mut self,
-        ga_options: GeneticAlgorithmOptions<Mutator, Reproducer>,
+        ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
         population: Population<Subject>,
     ) where
+        CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
         Mutator: ApplyMutation<Subject = Subject>,
         Reproducer: ApplyReproduction<Subject = Subject>,
     {
@@ -75,10 +76,11 @@ where
 pub fn ga_runner<
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
+    CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 >(
-    ga_options: GeneticAlgorithmOptions<Mutator, Reproducer>,
+    ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
     runner_options: GaRunnerOptions<Subject>,
     population: Population<Subject>,
     rng: &mut RandNumGen,

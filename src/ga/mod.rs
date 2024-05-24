@@ -3,6 +3,7 @@ use std::ops::Range;
 use std::usize;
 
 use derivative::Derivative;
+use rand::Rng;
 
 use population::Population;
 
@@ -30,12 +31,13 @@ pub struct CreatePopulationOptions<SubjectFn> {
     pub create_subject_fn: SubjectFn,
 }
 
-pub fn create_population_pool<Subject: Fit<Fitness>>(
-    options: CreatePopulationOptions<impl Fn() -> Subject>,
+pub fn create_population_pool<Subject: Fit<Fitness>, RandNumGen: Rng>(
+    rng: &mut RandNumGen,
+    options: CreatePopulationOptions<impl Fn(&mut RandNumGen) -> Subject>,
 ) -> Population<Subject> {
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
     for _ in 0..options.population_size {
-        let subject = (options.create_subject_fn)();
+        let subject = (options.create_subject_fn)(rng);
         subjects.push(FitnessWrapped::from(subject));
     }
     Population {
@@ -65,17 +67,21 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<Mutator, Reproducer> {
+pub struct GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer> {
     pub remove_duplicates: bool,
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
+    pub create_subject_fn: CreateSubjectFn,
+    pub cull_amount: usize,
     pub mutation_options: ApplyMutationOptions<Mutator>,
     pub reproduction_options: ApplyReproductionOptions<Reproducer>,
 }
 
-impl<Mutator, Reproducer> GeneticAlgorithmOptions<Mutator, Reproducer> {
+impl<CreateSubjectFn, Mutator, Reproducer>
+    GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>
+{
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
     }
