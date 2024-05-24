@@ -172,7 +172,7 @@ where
             }
             if !self.options.fitness_range.contains(&subject.fitness()) {
                 debug!(
-                    "outside of fitness range: {}..{} ({})",
+                    "outside of fitness range: {}..{} ({}), generation: {generation_ix}",
                     self.options.fitness_range.start,
                     self.options.fitness_range.end,
                     subject.fitness()
@@ -181,7 +181,7 @@ where
                 return None;
             }
             if self.options.target_fitness() == subject.fitness() {
-                debug!("target fitness reached: {target_fitness}");
+                debug!("target fitness reached: {target_fitness}, generation: {generation_ix}");
                 self.debug_print(&subject.subject());
                 return None;
             }
