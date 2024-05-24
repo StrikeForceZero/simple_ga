@@ -261,13 +261,14 @@ impl Board {
         for row in invalids {
             for col in row {
                 output.push_str(match (col.row, col.col, col.sub_grid) {
-                    (false, false, false) => "[ ]",
-                    (true, false, false) => "[R]",
-                    (false, true, false) => "[C]",
-                    (true, true, false) => "[X]",
-                    (false, false, true) => "[S]",
-                    (true, false, true) | (false, true, true) => "[#]",
-                    (true, true, true) => "[@]",
+                    (false, false, false) => "[   ]",
+                    (true, false, false) => "[R  ]",
+                    (false, true, false) => "[ C ]",
+                    (true, true, false) => "[RC ]",
+                    (false, false, true) => "[  S]",
+                    (true, false, true) => "[R S]",
+                    (false, true, true) => "[ CS]",
+                    (true, true, true) => "[RCS]",
                 })
             }
             output.push_str("\n");
