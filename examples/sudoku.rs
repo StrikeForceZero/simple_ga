@@ -5,6 +5,7 @@ use itertools::Group;
 use rand::{Rng, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use tracing::info;
+use tracing::log::debug;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
@@ -127,7 +128,7 @@ impl Board {
         SudokuValidationResult::validate(self.0)
     }
     fn validation_display_string(&self) -> String {
-        #[derive(Default)]
+        #[derive(Default, Debug)]
         struct Pos {
             row_ix: usize,
             col_ix: usize,
@@ -139,7 +140,7 @@ impl Board {
             }
         }
 
-        #[derive(Default)]
+        #[derive(Default, Debug)]
         struct RemappedBoardCell {
             pos: Pos,
             cell: u8,
@@ -151,36 +152,123 @@ impl Board {
             }
         }
 
-        let mut invalids = BoardLikeData::<bool>::default();
+        #[derive(Debug, Copy, Clone)]
+        enum InvalidType {
+            Row,
+            Col,
+            SubGrid,
+        }
 
-        let mut mark_invalid = |group: BoardLikeGroup<RemappedBoardCell>| {
-            let mut seen = HashSet::new();
-            for RemappedBoardCell { pos, cell } in group.iter() {
-                if (1..=9).contains(cell) && seen.insert(*cell) {
-                } else {
-                    invalids[pos.row_ix][pos.col_ix] = true;
+        #[derive(Default, Debug)]
+        struct InvalidFlags {
+            row: bool,
+            col: bool,
+            sub_grid: bool,
+        }
+
+        impl InvalidFlags {
+            fn set(&mut self, invalid_type: InvalidType) {
+                match invalid_type {
+                    InvalidType::Row => self.row = true,
+                    InvalidType::Col => self.col = true,
+                    InvalidType::SubGrid => self.sub_grid = true,
                 }
             }
-        };
+        }
 
+        let mut invalids = BoardLikeData::<InvalidFlags>::default();
+
+        let mut mark_invalid_row_col =
+            |invalids: &mut BoardLikeData<InvalidFlags>,
+             group: BoardLikeGroup<RemappedBoardCell>,
+             invalid_type: InvalidType| {
+                let mut seen = HashSet::new();
+                for RemappedBoardCell { pos, cell } in group.iter() {
+                    if (1..=9).contains(cell) && seen.insert(*cell) {
+                        // skip
+                    } else {
+                        invalids[pos.row_ix][pos.col_ix].set(invalid_type);
+                    }
+                }
+            };
+        let mut mark_invalid_sub_grid =
+            |invalids: &mut BoardLikeData<InvalidFlags>,
+             group: BoardLikeGroup<RemappedBoardCell>,
+             invalid_type: InvalidType| {
+                let mut seen = HashSet::new();
+                let mut invalid_positions = Vec::new();
+                for RemappedBoardCell { pos, cell } in group.iter() {
+                    if (1..=9).contains(cell) && seen.insert(*cell) {
+                        // skip
+                    } else {
+                        invalid_positions.push((pos.row_ix, pos.col_ix));
+                    }
+                }
+                for (row_ix, col_ix) in invalid_positions {
+                    let box_row_start = (row_ix / 3) * 3;
+                    let box_col_start = (col_ix / 3) * 3;
+                    for row in 0..3 {
+                        for col in 0..3 {
+                            invalids[box_row_start + row][box_col_start + col].set(invalid_type);
+                        }
+                    }
+                }
+            };
+
+        // Mark invalid sub grids
+        for box_row in 0..3 {
+            for box_col in 0..3 {
+                let mut subgrid = Vec::new();
+                for row in 0..3 {
+                    for col in 0..3 {
+                        let global_row = box_row * 3 + row;
+                        let global_col = box_col * 3 + col;
+                        subgrid.push(RemappedBoardCell::new(
+                            Pos::new(global_row, global_col),
+                            self.0[global_row][global_col],
+                        ));
+                    }
+                }
+                mark_invalid_sub_grid(
+                    &mut invalids,
+                    subgrid
+                        .try_into()
+                        .expect("failed to convert vec into [_;9]"),
+                    InvalidType::SubGrid,
+                );
+            }
+        }
+
+        // Mark invalid rows
         for (row_ix, row) in self.0.iter().enumerate() {
             let mut remapped_row = BoardLikeGroup::<RemappedBoardCell>::default();
             for (col_ix, col) in row.iter().enumerate() {
                 remapped_row[col_ix] = RemappedBoardCell::new(Pos::new(row_ix, col_ix), *col);
             }
-            mark_invalid(remapped_row);
+            mark_invalid_row_col(&mut invalids, remapped_row, InvalidType::Row);
         }
+
+        // Mark invalid columns
         for col in 0..9 {
             let mut column = BoardLikeGroup::<RemappedBoardCell>::default();
             for row in 0..9 {
                 column[row] = RemappedBoardCell::new(Pos::new(row, col), self.0[row][col]);
             }
-            mark_invalid(column)
+            mark_invalid_row_col(&mut invalids, column, InvalidType::Col)
         }
+
         let mut output = String::new();
         for row in invalids {
             for col in row {
-                output.push_str(if col { "[X]" } else { "[ ]" })
+                output.push_str(match (col.row, col.col, col.sub_grid) {
+                    (false, false, false) => "[ ]",
+                    (true, false, false) => "[R]",
+                    (false, true, false) => "[C]",
+                    (true, true, false) => "[X]",
+                    (false, false, true) => "[S]",
+                    (true, false, true) | (false, true, true) => "[#]",
+                    (true, true, true) => "[@]",
+                })
             }
             output.push_str("\n");
         }
@@ -204,8 +292,12 @@ impl Board {
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for row in self.0.iter() {
-            for col in row.iter() {
-                write!(f, "[{col}]")?;
+            for &col in row.iter() {
+                if col > 0 {
+                    write!(f, "[{col}]")?;
+                } else {
+                    write!(f, "[ ]")?;
+                }
             }
             writeln!(f, "")?;
         }
