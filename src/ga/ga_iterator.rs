@@ -8,8 +8,8 @@ use rand::Rng;
 use tracing::info;
 use tracing::log::{debug, warn};
 
+use crate::ga::{GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
-use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
@@ -28,17 +28,19 @@ impl<Subject> Default for GaIterOptions<Subject> {
     }
 }
 
-pub struct GaIterState<Subject> {
+pub struct GaIterState<'rng, RandNumGen: Rng, Subject> {
+    pub(crate) context: GaContext<'rng, RandNumGen>,
     pub(crate) generation: usize,
     pub(crate) current_fitness: Option<Fitness>,
     pub(crate) reverse_mode_enabled: Option<bool>,
     pub population: Population<Subject>,
 }
 
-impl<Subject> GaIterState<Subject> {
-    pub fn new(population: Population<Subject>) -> Self {
+impl<'rng, RandNumGen: Rng, Subject> GaIterState<'rng, RandNumGen, Subject> {
+    pub fn new(context: GaContext<'rng, RandNumGen>, population: Population<Subject>) -> Self {
         Self {
             population,
+            context,
             generation: 0,
             current_fitness: None,
             reverse_mode_enabled: None,
@@ -75,7 +77,7 @@ impl<Subject> GaIterState<Subject> {
     }
 }
 
-impl<Subject: Debug> Debug for GaIterState<Subject> {
+impl<'rng, RandNumGen: Rng, Subject: Debug> Debug for GaIterState<'rng, RandNumGen, Subject> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaIterState")
             .field("generation", &self.generation)
@@ -86,12 +88,14 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer> {
+pub struct GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
+where
+    RandNumGen: Rng,
+{
     options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-    state: GaIterState<Subject>,
+    state: GaIterState<'rng, RandNumGen, Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
-    rng: &'rng mut RandNumGen,
 }
 
 impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
@@ -99,36 +103,33 @@ impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
 where
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&mut RandNumGen, usize) -> Subject,
+    CreateSubjectFn: Fn(&GaContext<'rng, RandNumGen>) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
     pub fn new(
         options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-        mut state: GaIterState<Subject>,
-        rng: &'rng mut RandNumGen,
+        mut state: GaIterState<'rng, RandNumGen, Subject>,
     ) -> Self {
         Self {
             ga_iter_options: GaIterOptions::default(),
             is_reverse_mode: state.get_or_init_reverse_mode_enabled(&options),
             options,
             state,
-            rng,
         }
     }
 
     pub fn new_with_options(
         options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-        state: GaIterState<Subject>,
-        rng: &'rng mut RandNumGen,
+        state: GaIterState<'rng, RandNumGen, Subject>,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
-        let mut iter = Self::new(options, state, rng);
+        let mut iter = Self::new(options, state);
         iter.ga_iter_options = ga_iter_options;
         iter
     }
 
-    pub fn state(&self) -> &GaIterState<Subject> {
+    pub fn state(&self) -> &GaIterState<'rng, RandNumGen, Subject> {
         &self.state
     }
 
@@ -187,16 +188,17 @@ where
             }
         }
         PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
-            .prune_random(&mut self.state.population.subjects, self.rng);
+            .prune_random(
+                &mut self.state.population.subjects,
+                *self.state.context.rng(),
+            );
         apply_reproductions(
-            self.rng,
-            generation_ix,
+            &mut self.state.context,
             &mut self.state.population,
             &self.options.reproduction_options,
         );
         apply_mutations(
-            self.rng,
-            generation_ix,
+            &mut self.state.context,
             &mut self.state.population,
             &self.options.mutation_options,
         );
@@ -225,7 +227,7 @@ where
             }
         }
         while self.state.population.subjects.len() < self.state.population.pool_size {
-            let new_subject = (&self.options.create_subject_fn)(self.rng, generation_ix);
+            let new_subject = (&self.options.create_subject_fn)(&self.state.context);
             let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
             if fitness_wrapped.fitness() == self.options.target_fitness() {
                 warn!("created a subject that measures at the target fitness {} in generation {generation_ix}", self.options.target_fitness());

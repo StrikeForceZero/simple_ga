@@ -6,7 +6,9 @@ use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use tracing::{debug, info};
 
-use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
+use simple_ga::ga::{
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
@@ -377,12 +379,7 @@ enum MutatorFn {
 impl ApplyMutation for MutatorFn {
     type Subject = WrappedBoard;
 
-    fn apply(
-        &self,
-        rng: &mut impl Rng,
-        generation: usize,
-        subject: &Self::Subject,
-    ) -> Self::Subject {
+    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject {
         let mut subject = subject.board.clone();
         fn random_cell(
             rng: &mut impl Rng,
@@ -404,10 +401,10 @@ impl ApplyMutation for MutatorFn {
         WrappedBoard::create_mutation(
             match self {
                 Self::RotateRow => {
-                    let Some(random_row) = subject.0.choose_mut(rng) else {
+                    let Some(random_row) = subject.0.choose_mut(*context.rng()) else {
                         unreachable!();
                     };
-                    if rng.gen_bool(0.5) {
+                    if context.rng().gen_bool(0.5) {
                         random_row.rotate_left(1);
                     } else {
                         random_row.rotate_right(1);
@@ -415,29 +412,33 @@ impl ApplyMutation for MutatorFn {
                     subject
                 }
                 Self::RandomFill => {
-                    let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell == 0) else {
-                        return WrappedBoard::create_mutation(subject, generation);
+                    let Some((row, col, _)) =
+                        random_cell(*context.rng(), &subject, |cell| cell == 0)
+                    else {
+                        return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
                         unreachable!();
                     };
-                    *random_cell = rng.gen_range(1..=9);
+                    *random_cell = context.rng().gen_range(1..=9);
                     subject
                 }
                 Self::RandomOverwrite => {
-                    let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell > 0) else {
-                        return WrappedBoard::create_mutation(subject, generation);
+                    let Some((row, col, _)) =
+                        random_cell(*context.rng(), &subject, |cell| cell > 0)
+                    else {
+                        return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
                         unreachable!();
                     };
-                    *random_cell = rng.gen_range(1..=9);
+                    *random_cell = context.rng().gen_range(1..=9);
                     subject
                 }
             },
-            generation,
+            context.generation,
         )
     }
 
@@ -455,8 +456,7 @@ impl ApplyReproduction for ReproductionFn {
 
     fn apply(
         &self,
-        rng: &mut impl Rng,
-        generation: usize,
+        context: &GaContext<'_, impl Rng>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -470,7 +470,7 @@ impl ApplyReproduction for ReproductionFn {
                     let (a, b) = a.iter().zip(b).enumerate().fold(
                         ([0u8; 9], [0u8; 9]),
                         |(mut a, mut b), (ix, (&a_val, &b_val))| {
-                            let (new_a_val, new_b_val) = if rng.gen_bool(0.5) {
+                            let (new_a_val, new_b_val) = if context.rng().gen_bool(0.5) {
                                 (a_val, b_val)
                             } else {
                                 (b_val, a_val)
@@ -484,8 +484,8 @@ impl ApplyReproduction for ReproductionFn {
                     new_b[row_ix] = b;
                 }
                 (
-                    WrappedBoard::create_reproduction(Board(new_a), generation),
-                    WrappedBoard::create_reproduction(Board(new_b), generation),
+                    WrappedBoard::create_reproduction(Board(new_a), context.generation),
+                    WrappedBoard::create_reproduction(Board(new_b), context.generation),
                 )
             }
         }
@@ -511,23 +511,23 @@ fn main() {
         );
     }
 
-    let create_subject_fn = Box::new(|rng: &mut ThreadRng, generation: usize| {
-        let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), generation);
+    let create_subject_fn = Box::new(|ga_context: &GaContext<'_, ThreadRng>| {
+        let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
         let board = &mut wrapped_board.board.0;
-        if rng.gen_bool(0.1) {
+        if ga_context.rng().gen_bool(0.1) {
             for row in board.iter_mut() {
                 for col in row.iter_mut() {
-                    *col = rng.gen_range(1..=9);
+                    *col = ga_context.rng().gen_range(1..=9);
                 }
             }
-        } else if rng.gen_bool(0.75) {
+        } else if ga_context.rng().gen_bool(0.75) {
             const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
             for row in board.iter_mut() {
                 *row = FULL;
-                if rng.gen_bool(0.5) {
-                    row.rotate_left(rng.gen_range(0..9));
+                if ga_context.rng().gen_bool(0.5) {
+                    row.rotate_left(ga_context.rng().gen_range(0..9));
                 } else {
-                    row.rotate_left(rng.gen_range(0..9));
+                    row.rotate_left(ga_context.rng().gen_range(0..9));
                 }
             }
         }

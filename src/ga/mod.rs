@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::usize;
@@ -31,13 +32,14 @@ pub struct CreatePopulationOptions<SubjectFn> {
     pub create_subject_fn: SubjectFn,
 }
 
-pub fn create_population_pool<Subject: Fit<Fitness>, RandNumGen: Rng>(
-    rng: &mut RandNumGen,
-    options: CreatePopulationOptions<impl Fn(&mut RandNumGen, usize) -> Subject>,
+pub fn create_population_pool<'rng, Subject: Fit<Fitness>, RandNumGen: Rng>(
+    rng: &'rng mut RandNumGen,
+    options: CreatePopulationOptions<impl Fn(&GaContext<'rng, RandNumGen>) -> Subject>,
 ) -> Population<Subject> {
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
+    let context = GaContext::new(rng);
     for _ in 0..options.population_size {
-        let subject = (options.create_subject_fn)(rng, 0);
+        let subject = (options.create_subject_fn)(&context);
         subjects.push(FitnessWrapped::from(subject));
     }
     Population {
@@ -87,5 +89,31 @@ impl<CreateSubjectFn, Mutator, Reproducer>
     }
     pub fn target_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.end
+    }
+}
+
+pub struct GaContext<'rng, RandNumGen>
+where
+    RandNumGen: Rng,
+{
+    pub(self) rng: RefCell<&'rng mut RandNumGen>,
+    pub generation: usize,
+}
+
+impl<'rng, RandNumGen> GaContext<'rng, RandNumGen>
+where
+    RandNumGen: Rng,
+{
+    pub fn new(rng: &'rng mut RandNumGen) -> Self {
+        Self {
+            rng: RefCell::new(rng),
+            generation: 0,
+        }
+    }
+    pub fn rng(&self) -> RefMut<&'rng mut RandNumGen> {
+        self.rng.borrow_mut()
+    }
+    pub fn generation(&self) -> usize {
+        self.generation
     }
 }

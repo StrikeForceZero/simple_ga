@@ -2,9 +2,9 @@ use derivative::Derivative;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
 
+use crate::ga::{GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
-use crate::ga::WeightedAction;
 use crate::util::{coin_flip, Odds};
 
 #[derive(Derivative, Clone, Default)]
@@ -23,29 +23,23 @@ pub struct ApplyMutationOptions<Mutator> {
 
 pub trait ApplyMutation {
     type Subject;
-    fn apply(
-        &self,
-        rng: &mut impl Rng,
-        generation: usize,
-        subject: &Self::Subject,
-    ) -> Self::Subject;
+    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
-    rng: &mut RandNumGen,
-    generation: usize,
+pub fn apply_mutations<'rng, RandNumGen: Rng, Mutator: ApplyMutation>(
+    context: &mut GaContext<'rng, RandNumGen>,
     population: &mut Population<Mutator::Subject>,
     options: &ApplyMutationOptions<Mutator>,
 ) {
     let mut appended_subjects = vec![];
     for wrapped_subject in population.subjects.iter_mut() {
-        if !coin_flip(rng, options.overall_mutation_chance) {
+        if !coin_flip(*context.rng(), options.overall_mutation_chance) {
             continue;
         }
-        let mut do_mutation = |rng: &mut RandNumGen, mutator: &Mutator| {
+        let mut do_mutation = |context: &mut GaContext<'rng, RandNumGen>, mutator: &Mutator| {
             let subject = &wrapped_subject.subject();
-            let mutated_subject = mutator.apply(rng, generation, subject);
+            let mutated_subject = mutator.apply(context, subject);
             let fitness = Mutator::fitness(&mutated_subject);
             let fw = FitnessWrapped::new(mutated_subject, fitness);
             if options.clone_on_mutation {
@@ -56,10 +50,10 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
         };
         if options.multi_mutation {
             for weighted_action in options.mutation_actions.iter() {
-                if !coin_flip(rng, weighted_action.weight) {
+                if !coin_flip(*context.rng(), weighted_action.weight) {
                     continue;
                 }
-                do_mutation(rng, &weighted_action.action);
+                do_mutation(context, &weighted_action.action);
             }
         } else {
             let weights: Vec<f64> = options
@@ -71,8 +65,8 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(rng);
-            do_mutation(rng, &options.mutation_actions[index].action);
+            let index = dist.sample(*context.rng());
+            do_mutation(context, &options.mutation_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);

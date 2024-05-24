@@ -1,11 +1,13 @@
 use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
-use rand::{random, Rng, thread_rng};
+use rand::{Rng, thread_rng};
 use rand::rngs::ThreadRng;
 use tracing::info;
 
-use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
+use simple_ga::ga::{
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
@@ -89,23 +91,22 @@ enum MutatorFns {
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
 
-    fn apply(
-        &self,
-        rng: &mut impl Rng,
-        _generation: usize,
-        subject: &Self::Subject,
-    ) -> Self::Subject {
+    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject {
         let subject_f64 = subject.as_f64();
         let mutated_result = match self {
             MutatorFns::AddOne => subject_f64 + 1.0,
             MutatorFns::SubOne => subject_f64 - 1.0,
-            MutatorFns::AddRandom => subject_f64 + random_f64(rng),
-            MutatorFns::SubRandom => subject_f64 - random_f64(rng),
-            MutatorFns::AddRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), 1),
-            MutatorFns::SubRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), -1),
+            MutatorFns::AddRandom => subject_f64 + random_f64(*context.rng()),
+            MutatorFns::SubRandom => subject_f64 - random_f64(*context.rng()),
+            MutatorFns::AddRandomPosOne => {
+                random_pos_add(subject_f64, context.rng().gen_range(0..16), 1)
+            }
+            MutatorFns::SubRandomPosOne => {
+                random_pos_add(subject_f64, context.rng().gen_range(0..16), -1)
+            }
             MutatorFns::Truncate => subject_f64.trunc(),
             MutatorFns::RandTruncate => {
-                let offset = rng.gen_range(1..=6) as f64;
+                let offset = context.rng().gen_range(1..=6) as f64;
                 (subject_f64 * offset).trunc() / offset
             }
         };
@@ -129,8 +130,7 @@ impl ApplyReproduction for ReproductionFns {
 
     fn apply(
         &self,
-        _rng: &mut impl Rng,
-        _generation: usize,
+        _context: &GaContext<'_, impl Rng>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -223,8 +223,9 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn =
-        Box::new(|rng: &mut ThreadRng, _generation: usize| -> Subject { random_f64(rng).into() });
+    let create_subject_fn = Box::new(|context: &GaContext<'_, ThreadRng>| -> Subject {
+        random_f64(*context.rng()).into()
+    });
 
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
