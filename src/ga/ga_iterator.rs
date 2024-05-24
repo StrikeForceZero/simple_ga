@@ -99,7 +99,7 @@ impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
 where
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
+    CreateSubjectFn: Fn(&mut RandNumGen, usize) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
@@ -190,11 +190,13 @@ where
             .prune_random(&mut self.state.population.subjects, self.rng);
         apply_reproductions(
             self.rng,
+            generation_ix,
             &mut self.state.population,
             &self.options.reproduction_options,
         );
         apply_mutations(
             self.rng,
+            generation_ix,
             &mut self.state.population,
             &self.options.mutation_options,
         );
@@ -223,7 +225,7 @@ where
             }
         }
         while self.state.population.subjects.len() < self.state.population.pool_size {
-            let new_subject = (&self.options.create_subject_fn)(self.rng);
+            let new_subject = (&self.options.create_subject_fn)(self.rng, generation_ix);
             let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
             if fitness_wrapped.fitness() == self.options.target_fitness() {
                 warn!("created a subject that measures at the target fitness {} in generation {generation_ix}", self.options.target_fitness());

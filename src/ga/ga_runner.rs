@@ -44,7 +44,7 @@ where
         ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
         population: Population<Subject>,
     ) where
-        CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
+        CreateSubjectFn: Fn(&mut RandNumGen, usize) -> Subject,
         Mutator: ApplyMutation<Subject = Subject>,
         Reproducer: ApplyReproduction<Subject = Subject>,
     {
@@ -76,7 +76,7 @@ where
 pub fn ga_runner<
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&mut RandNumGen) -> Subject,
+    CreateSubjectFn: Fn(&mut RandNumGen, usize) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 >(

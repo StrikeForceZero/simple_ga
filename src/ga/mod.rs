@@ -33,11 +33,11 @@ pub struct CreatePopulationOptions<SubjectFn> {
 
 pub fn create_population_pool<Subject: Fit<Fitness>, RandNumGen: Rng>(
     rng: &mut RandNumGen,
-    options: CreatePopulationOptions<impl Fn(&mut RandNumGen) -> Subject>,
+    options: CreatePopulationOptions<impl Fn(&mut RandNumGen, usize) -> Subject>,
 ) -> Population<Subject> {
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
     for _ in 0..options.population_size {
-        let subject = (options.create_subject_fn)(rng);
+        let subject = (options.create_subject_fn)(rng, 0);
         subjects.push(FitnessWrapped::from(subject));
     }
     Population {

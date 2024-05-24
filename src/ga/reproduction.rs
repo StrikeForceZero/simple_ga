@@ -33,6 +33,7 @@ pub trait ApplyReproduction {
     fn apply(
         &self,
         rng: &mut impl Rng,
+        generation: usize,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject);
@@ -41,6 +42,7 @@ pub trait ApplyReproduction {
 
 pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
     rng: &mut RandNumGen,
+    generation: usize,
     population: &mut Population<Reproducer::Subject>,
     options: &ApplyReproductionOptions<Reproducer>,
 ) {
@@ -57,7 +59,8 @@ pub fn apply_reproductions<RandNumGen: Rng, Reproducer: ApplyReproduction>(
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
 
         let mut do_reproduction = |rng: &mut RandNumGen, reproducer: &Reproducer| {
-            let (offspring_a, offspring_b) = reproducer.apply(rng, subject_a, subject_b);
+            let (offspring_a, offspring_b) =
+                reproducer.apply(rng, generation, subject_a, subject_b);
             {
                 let fitness = Reproducer::fitness(&offspring_a);
                 appended_subjects.push(FitnessWrapped::new(offspring_a, fitness));

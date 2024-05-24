@@ -89,7 +89,12 @@ enum MutatorFns {
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
 
-    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject {
+    fn apply(
+        &self,
+        rng: &mut impl Rng,
+        _generation: usize,
+        subject: &Self::Subject,
+    ) -> Self::Subject {
         let subject_f64 = subject.as_f64();
         let mutated_result = match self {
             MutatorFns::AddOne => subject_f64 + 1.0,
@@ -125,6 +130,7 @@ impl ApplyReproduction for ReproductionFns {
     fn apply(
         &self,
         _rng: &mut impl Rng,
+        _generation: usize,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -217,7 +223,8 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn = Box::new(|rng: &mut ThreadRng| -> Subject { random_f64(rng).into() });
+    let create_subject_fn =
+        Box::new(|rng: &mut ThreadRng, _generation: usize| -> Subject { random_f64(rng).into() });
 
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,

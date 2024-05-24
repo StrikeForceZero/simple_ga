@@ -23,12 +23,18 @@ pub struct ApplyMutationOptions<Mutator> {
 
 pub trait ApplyMutation {
     type Subject;
-    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject;
+    fn apply(
+        &self,
+        rng: &mut impl Rng,
+        generation: usize,
+        subject: &Self::Subject,
+    ) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
 pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
     rng: &mut RandNumGen,
+    generation: usize,
     population: &mut Population<Mutator::Subject>,
     options: &ApplyMutationOptions<Mutator>,
 ) {
@@ -39,7 +45,7 @@ pub fn apply_mutations<RandNumGen: Rng, Mutator: ApplyMutation>(
         }
         let mut do_mutation = |rng: &mut RandNumGen, mutator: &Mutator| {
             let subject = &wrapped_subject.subject();
-            let mutated_subject = mutator.apply(rng, subject);
+            let mutated_subject = mutator.apply(rng, generation, subject);
             let fitness = Mutator::fitness(&mutated_subject);
             let fw = FitnessWrapped::new(mutated_subject, fitness);
             if options.clone_on_mutation {

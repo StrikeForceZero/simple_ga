@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use rand::{Rng, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
-use tracing::info;
+use tracing::{debug, info};
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
@@ -119,8 +119,9 @@ type BoardLikeGroup<T> = [T; 9];
 type BoardLikeData<T> = [BoardLikeGroup<T>; 9];
 type BoardData = BoardLikeData<u8>;
 
+// TODO: We should wrap this so we can offload generation to the wrapper struct
 #[derive(Default, Clone, PartialEq, Eq, Hash)]
-struct Board(BoardData);
+struct Board(BoardData, usize);
 
 impl Board {
     #[cfg(test)]
@@ -332,7 +333,12 @@ enum MutatorFn {
 impl ApplyMutation for MutatorFn {
     type Subject = Board;
 
-    fn apply(&self, rng: &mut impl Rng, subject: &Self::Subject) -> Self::Subject {
+    fn apply(
+        &self,
+        rng: &mut impl Rng,
+        _generation: usize,
+        subject: &Self::Subject,
+    ) -> Self::Subject {
         let mut subject = subject.clone();
         fn random_cell(
             rng: &mut impl Rng,
@@ -403,6 +409,7 @@ impl ApplyReproduction for ReproductionFn {
     fn apply(
         &self,
         rng: &mut impl Rng,
+        generation: usize,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -427,7 +434,7 @@ impl ApplyReproduction for ReproductionFn {
                     new_a[row_ix] = a;
                     new_b[row_ix] = b;
                 }
-                (Board(new_a), Board(new_b))
+                (Board(new_a, generation), Board(new_b, generation))
             }
         }
     }
@@ -444,11 +451,16 @@ fn main() {
     let target_fitness = 0.0;
     fn debug_print(subject: &Board) {
         let fitness = subject.measure();
-        println!("best: ({fitness})\n{}", subject.full_display_string());
+        debug!(
+            "best: ({fitness}) generation born: {}\n{}",
+            subject.1,
+            subject.full_display_string()
+        );
     }
 
-    let create_subject_fn = Box::new(|rng: &mut ThreadRng| {
+    let create_subject_fn = Box::new(|rng: &mut ThreadRng, generation: usize| {
         let mut board = Board::default();
+        board.1 = generation;
         if rng.gen_bool(0.1) {
             for row in board.0.iter_mut() {
                 for col in row.iter_mut() {
@@ -515,41 +527,50 @@ fn main() {
 mod tests {
     use super::*;
 
-    const CORRECT_BOARD: Board = Board([
-        [5, 3, 4, 6, 7, 8, 9, 1, 2],
-        [6, 7, 2, 1, 9, 5, 3, 4, 8],
-        [1, 9, 8, 3, 4, 2, 5, 6, 7],
-        [8, 5, 9, 7, 6, 1, 4, 2, 3],
-        [4, 2, 6, 8, 5, 3, 7, 9, 1],
-        [7, 1, 3, 9, 2, 4, 8, 5, 6],
-        [9, 6, 1, 5, 3, 7, 2, 8, 4],
-        [2, 8, 7, 4, 1, 9, 6, 3, 5],
-        [3, 4, 5, 2, 8, 6, 1, 7, 9],
-    ]);
+    const CORRECT_BOARD: Board = Board(
+        [
+            [5, 3, 4, 6, 7, 8, 9, 1, 2],
+            [6, 7, 2, 1, 9, 5, 3, 4, 8],
+            [1, 9, 8, 3, 4, 2, 5, 6, 7],
+            [8, 5, 9, 7, 6, 1, 4, 2, 3],
+            [4, 2, 6, 8, 5, 3, 7, 9, 1],
+            [7, 1, 3, 9, 2, 4, 8, 5, 6],
+            [9, 6, 1, 5, 3, 7, 2, 8, 4],
+            [2, 8, 7, 4, 1, 9, 6, 3, 5],
+            [3, 4, 5, 2, 8, 6, 1, 7, 9],
+        ],
+        0,
+    );
 
-    const SINGLE_WRONG: Board = Board([
-        [3, 3, 4, 6, 7, 8, 9, 1, 2],
-        [6, 7, 2, 1, 9, 5, 3, 4, 8],
-        [1, 9, 8, 3, 4, 2, 5, 6, 7],
-        [8, 5, 9, 7, 6, 1, 4, 2, 3],
-        [4, 2, 6, 8, 5, 3, 7, 9, 1],
-        [7, 1, 3, 9, 2, 4, 8, 5, 6],
-        [9, 6, 1, 5, 3, 7, 2, 8, 4],
-        [2, 8, 7, 4, 1, 9, 6, 3, 5],
-        [3, 4, 5, 2, 8, 6, 1, 7, 9],
-    ]);
+    const SINGLE_WRONG: Board = Board(
+        [
+            [3, 3, 4, 6, 7, 8, 9, 1, 2],
+            [6, 7, 2, 1, 9, 5, 3, 4, 8],
+            [1, 9, 8, 3, 4, 2, 5, 6, 7],
+            [8, 5, 9, 7, 6, 1, 4, 2, 3],
+            [4, 2, 6, 8, 5, 3, 7, 9, 1],
+            [7, 1, 3, 9, 2, 4, 8, 5, 6],
+            [9, 6, 1, 5, 3, 7, 2, 8, 4],
+            [2, 8, 7, 4, 1, 9, 6, 3, 5],
+            [3, 4, 5, 2, 8, 6, 1, 7, 9],
+        ],
+        0,
+    );
 
-    const SINGLE_UNKNOWN: Board = Board([
-        [0, 3, 4, 6, 7, 8, 9, 1, 2],
-        [6, 7, 2, 1, 9, 5, 3, 4, 8],
-        [1, 9, 8, 3, 4, 2, 5, 6, 7],
-        [8, 5, 9, 7, 6, 1, 4, 2, 3],
-        [4, 2, 6, 8, 5, 3, 7, 9, 1],
-        [7, 1, 3, 9, 2, 4, 8, 5, 6],
-        [9, 6, 1, 5, 3, 7, 2, 8, 4],
-        [2, 8, 7, 4, 1, 9, 6, 3, 5],
-        [3, 4, 5, 2, 8, 6, 1, 7, 9],
-    ]);
+    const SINGLE_UNKNOWN: Board = Board(
+        [
+            [0, 3, 4, 6, 7, 8, 9, 1, 2],
+            [6, 7, 2, 1, 9, 5, 3, 4, 8],
+            [1, 9, 8, 3, 4, 2, 5, 6, 7],
+            [8, 5, 9, 7, 6, 1, 4, 2, 3],
+            [4, 2, 6, 8, 5, 3, 7, 9, 1],
+            [7, 1, 3, 9, 2, 4, 8, 5, 6],
+            [9, 6, 1, 5, 3, 7, 2, 8, 4],
+            [2, 8, 7, 4, 1, 9, 6, 3, 5],
+            [3, 4, 5, 2, 8, 6, 1, 7, 9],
+        ],
+        0,
+    );
 
     #[test]
     fn test_validation() {
