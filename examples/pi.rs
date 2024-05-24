@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
 use rand::{random, Rng, thread_rng};
+use rand::rngs::ThreadRng;
 use tracing::info;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
@@ -216,7 +217,7 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn = Box::new(|| -> Subject { random_f64(rng).into() });
+    let create_subject_fn = Box::new(|rng: &mut ThreadRng| -> Subject { random_f64(rng).into() });
 
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
