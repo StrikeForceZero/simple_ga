@@ -8,7 +8,7 @@ use rand::Rng;
 use tracing::info;
 use tracing::log::debug;
 
-use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
+use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;

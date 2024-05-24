@@ -1,12 +1,10 @@
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
-use itertools::Group;
 use rand::{Rng, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::rngs::ThreadRng;
 use tracing::info;
-use tracing::log::debug;
 
 use simple_ga::ga::{create_population_pool, CreatePopulationOptions, GeneticAlgorithmOptions};
 use simple_ga::ga::fitness::{Fit, Fitness};
@@ -125,6 +123,7 @@ type BoardData = BoardLikeData<u8>;
 struct Board(BoardData);
 
 impl Board {
+    #[cfg(test)]
     fn validate(&self) -> SudokuValidationResult {
         SudokuValidationResult::validate(self.0)
     }
@@ -179,20 +178,19 @@ impl Board {
 
         let mut invalids = BoardLikeData::<InvalidFlags>::default();
 
-        let mut mark_invalid_row_col =
-            |invalids: &mut BoardLikeData<InvalidFlags>,
-             group: BoardLikeGroup<RemappedBoardCell>,
-             invalid_type: InvalidType| {
-                let mut seen = HashSet::new();
-                for RemappedBoardCell { pos, cell } in group.iter() {
-                    if (1..=9).contains(cell) && seen.insert(*cell) {
-                        // skip
-                    } else {
-                        invalids[pos.row_ix][pos.col_ix].set(invalid_type);
-                    }
+        let mark_invalid_row_col = |invalids: &mut BoardLikeData<InvalidFlags>,
+                                    group: BoardLikeGroup<RemappedBoardCell>,
+                                    invalid_type: InvalidType| {
+            let mut seen = HashSet::new();
+            for RemappedBoardCell { pos, cell } in group.iter() {
+                if (1..=9).contains(cell) && seen.insert(*cell) {
+                    // skip
+                } else {
+                    invalids[pos.row_ix][pos.col_ix].set(invalid_type);
                 }
-            };
-        let mut mark_invalid_sub_grid =
+            }
+        };
+        let mark_invalid_sub_grid =
             |invalids: &mut BoardLikeData<InvalidFlags>,
              group: BoardLikeGroup<RemappedBoardCell>,
              invalid_type: InvalidType| {
@@ -352,7 +350,7 @@ impl ApplyMutation for MutatorFn {
                 })
                 .filter(|(_, _, col)| (&predicate)(*col));
             cells.choose(rng)
-        };
+        }
         match self {
             Self::RotateRow => {
                 let Some(random_row) = subject.0.choose_mut(rng) else {
