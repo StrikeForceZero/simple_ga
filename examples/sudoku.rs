@@ -439,7 +439,7 @@ impl ApplyReproduction for ReproductionFn {
 
 fn main() {
     let rng = &mut thread_rng();
-    let population_size = 500;
+    let population_size = 50;
     simple_ga_internal_lib::tracing::init_tracing();
     let target_fitness = 0.0;
     fn debug_print(subject: &Board) {
@@ -474,7 +474,7 @@ fn main() {
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
         fitness_range: target_fitness..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
-        cull_amount: (population_size as f32 * 0.33).round() as usize,
+        cull_amount: (population_size as f32 * 0.5).round() as usize,
         mutation_options: ApplyMutationOptions {
             clone_on_mutation: true,
             multi_mutation: false,
@@ -486,7 +486,7 @@ fn main() {
             ],
         },
         reproduction_options: ApplyReproductionOptions {
-            reproduction_limit: (population_size as f32 * 0.3).round() as usize,
+            reproduction_limit: (population_size as f32 * 0.25).round() as usize,
             multi_reproduction: false,
             overall_reproduction_chance: 0.25,
             reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
