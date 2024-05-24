@@ -6,9 +6,9 @@ use derivative::Derivative;
 use itertools::Itertools;
 use rand::Rng;
 use tracing::info;
-use tracing::log::debug;
+use tracing::log::{debug, warn};
 
-use crate::ga::fitness::{Fit, Fitness};
+use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::GeneticAlgorithmOptions;
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
@@ -224,7 +224,11 @@ where
         }
         while self.state.population.subjects.len() < self.state.population.pool_size {
             let new_subject = (&self.options.create_subject_fn)(self.rng);
-            self.state.population.subjects.push(new_subject.into());
+            let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
+            if fitness_wrapped.fitness() == self.options.target_fitness() {
+                warn!("created a subject that measures at the target fitness {} in generation {generation_ix}", self.options.target_fitness());
+            }
+            self.state.population.subjects.push(fitness_wrapped);
         }
         self.state.current_fitness
     }
