@@ -7,6 +7,9 @@ authors = ["Brett Striker <strikeforcezero@gmail.com>"]
 [workspace]
 members = ["crates/*"]
 
+[features]
+parallel = ["dep:rayon"]
+
 [dev-dependencies]
 simple_ga_internal_lib = { path = "crates/simple_ga_internal_lib" }
 rstest = "0.19"
@@ -19,6 +22,7 @@ itertools = "0.13"
 tracing = { version = "0.1", features = ["log"] }
 derivative = "2.2"
 statrs = "0.16"
+rayon = { version = "1", optional = true }
 
 [[example]]
 name = "pi"

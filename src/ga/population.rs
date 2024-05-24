@@ -1,9 +1,12 @@
+use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use itertools::Itertools;
 use rand::Rng;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
@@ -69,16 +72,33 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     ) -> Vec<&FitnessWrapped<Subject>> {
         SelectRandomManyWithBias::new(limit, Bias::Back).select_random(rng, &self.subjects)
     }
-    pub fn sort(&mut self) {
-        let population = &mut self.subjects;
-        population.sort_by(|a, b| a.fitness().partial_cmp(&b.fitness()).unwrap());
+
+    fn _sort(a: &FitnessWrapped<Subject>, b: &FitnessWrapped<Subject>) -> Ordering {
+        a.fitness().partial_cmp(&b.fitness()).unwrap()
     }
-    pub fn sort_rev(&mut self) {
-        let population = &mut self.subjects;
-        population.sort_by(|a, b| b.fitness().partial_cmp(&a.fitness()).unwrap());
+
+    fn _sort_rev(a: &FitnessWrapped<Subject>, b: &FitnessWrapped<Subject>) -> Ordering {
+        b.fitness().partial_cmp(&a.fitness()).unwrap()
     }
+
     pub fn add(&mut self, subject: FitnessWrapped<Subject>) {
         self.subjects.push(subject);
+    }
+}
+
+#[cfg(not(feature = "parallel"))]
+impl<Subject> Population<Subject>
+where
+    Subject: Hash + Eq + PartialEq,
+{
+    pub fn sort(&mut self) {
+        let population = &mut self.subjects;
+        population.sort_by(Self::_sort);
+    }
+
+    pub fn sort_rev(&mut self) {
+        let population = &mut self.subjects;
+        population.sort_by(Self::_sort_rev);
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
@@ -95,6 +115,36 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
 
     pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
         self.subjects.iter_mut().rev()
+    }
+}
+
+#[cfg(feature = "parallel")]
+impl<Subject> Population<Subject>
+where
+    Subject: Hash + Eq + PartialEq,
+{
+    pub fn sort(&mut self) {
+        let population = &mut self.subjects;
+        population.par_sort_by(Self::_sort);
+    }
+    pub fn sort_rev(&mut self) {
+        let population = &mut self.subjects;
+        population.par_sort_by(Self::_sort_rev);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
+        self.subjects.par_iter()
+    }
+    pub fn iter_reverse(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
+        self.iter().rev()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
+        self.subjects.par_iter_mut()
+    }
+
+    pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
+        self.iter_mut().rev()
     }
 }
 

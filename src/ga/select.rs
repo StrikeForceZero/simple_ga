@@ -2,6 +2,8 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 use rand::Rng;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
 use crate::util::{Bias, random_index_bias};
 
@@ -43,7 +45,8 @@ impl<T> SelectRandom<T> for SelectRandomWithBias {
         rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output {
-        let mut items = items.into_iter();
+        use crate::util::iter::FeatureBasedIntoIter;
+        let mut items = items.feature_based_into_iter();
         items.nth(random_index_bias(rng, items.len(), self.bias))
     }
 }
@@ -69,6 +72,7 @@ impl SelectRandomManyWithBias {
         rng: &mut RandNumGen,
         len: usize,
     ) -> HashSet<usize> {
+        use crate::util::iter::FeatureBasedIntoIter;
         let max_amount = self.amount.min(len);
         // not enough items just return the original slice as a new vec
         if max_amount >= len {
@@ -78,14 +82,14 @@ impl SelectRandomManyWithBias {
             while selected_indexes.len() < max_amount {
                 selected_indexes.insert(random_index_bias(rng, len, self.bias));
             }
-            selected_indexes.into_iter().collect()
+            selected_indexes.feature_based_into_iter().collect()
         } else {
             // it'll be faster to remove indexes randomly until we get the desired size
             let mut selected_indexes = (0..len).collect::<HashSet<_>>();
             while selected_indexes.len() > max_amount {
                 selected_indexes.remove(&random_index_bias(rng, len, self.bias.inverse()));
             }
-            selected_indexes.into_iter().collect()
+            selected_indexes.feature_based_into_iter().collect()
         }
     }
     fn select_random<
@@ -98,10 +102,11 @@ impl SelectRandomManyWithBias {
         rng: &mut RandNumGen,
         items: Iter,
     ) -> Vec<T> {
+        use crate::util::iter::FeatureBasedIntoIter;
         let mut items = items.into_iter();
         let (_, data) = self
             .select_random_indexes(rng, items.len())
-            .into_iter()
+            .feature_based_into_iter()
             .sorted()
             .fold((0, vec![]), |(skipped, mut data), next_ix| {
                 let Some(item) = items.nth(next_ix - skipped) else {

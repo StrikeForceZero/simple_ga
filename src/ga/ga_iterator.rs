@@ -5,6 +5,8 @@ use std::hash::Hash;
 use derivative::Derivative;
 use itertools::Itertools;
 use rand::Rng;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 use tracing::info;
 use tracing::log::{debug, warn};
 
@@ -204,11 +206,11 @@ where
         );
         if self.options.remove_duplicates {
             let mut indexes_to_delete: HashSet<usize> = HashSet::new();
-            for (a_ix, a_subject) in self.state.population.subjects.iter().enumerate() {
+            for (a_ix, a_subject) in self.state.population.iter().enumerate() {
                 if indexes_to_delete.contains(&a_ix) {
                     continue;
                 }
-                for (b_ix, b_subject) in self.state.population.subjects.iter().enumerate() {
+                for (b_ix, b_subject) in self.state.population.iter().enumerate() {
                     if a_ix == b_ix || indexes_to_delete.contains(&b_ix) {
                         continue;
                     }
@@ -219,7 +221,17 @@ where
                     }
                 }
             }
-            for ix in indexes_to_delete.iter().sorted().rev() {
+            let indexes_to_delete = {
+                #[cfg(feature = "parallel")]
+                {
+                    indexes_to_delete.par_iter().par_sort_unstable().rev()
+                }
+                #[cfg(not(feature = "parallel"))]
+                {
+                    indexes_to_delete.iter().sorted().rev()
+                }
+            };
+            for ix in indexes_to_delete {
                 if self.state.population.subjects.len() <= self.state.population.pool_size {
                     break;
                 }
