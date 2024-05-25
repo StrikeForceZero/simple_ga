@@ -379,7 +379,13 @@ enum MutatorFn {
 impl ApplyMutation for MutatorFn {
     type Subject = WrappedBoard;
 
-    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject {
+    fn apply(
+        &self,
+        context: &mut GaContext<'_, impl Rng>,
+        subject: &Self::Subject,
+    ) -> Self::Subject {
+        let rng = context.rng();
+        let mut rng = rng.lock().expect("failed to get lock on rng");
         let mut subject = subject.board.clone();
         fn random_cell(
             rng: &mut impl Rng,
@@ -401,10 +407,10 @@ impl ApplyMutation for MutatorFn {
         WrappedBoard::create_mutation(
             match self {
                 Self::RotateRow => {
-                    let Some(random_row) = subject.0.choose_mut(*context.rng()) else {
+                    let Some(random_row) = subject.0.choose_mut(*rng) else {
                         unreachable!();
                     };
-                    if context.rng().gen_bool(0.5) {
+                    if rng.gen_bool(0.5) {
                         random_row.rotate_left(1);
                     } else {
                         random_row.rotate_right(1);
@@ -412,29 +418,25 @@ impl ApplyMutation for MutatorFn {
                     subject
                 }
                 Self::RandomFill => {
-                    let Some((row, col, _)) =
-                        random_cell(*context.rng(), &subject, |cell| cell == 0)
-                    else {
+                    let Some((row, col, _)) = random_cell(*rng, &subject, |cell| cell == 0) else {
                         return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
                         unreachable!();
                     };
-                    *random_cell = context.rng().gen_range(1..=9);
+                    *random_cell = rng.gen_range(1..=9);
                     subject
                 }
                 Self::RandomOverwrite => {
-                    let Some((row, col, _)) =
-                        random_cell(*context.rng(), &subject, |cell| cell > 0)
-                    else {
+                    let Some((row, col, _)) = random_cell(*rng, &subject, |cell| cell > 0) else {
                         return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
                         unreachable!();
                     };
-                    *random_cell = context.rng().gen_range(1..=9);
+                    *random_cell = rng.gen_range(1..=9);
                     subject
                 }
             },
@@ -470,11 +472,12 @@ impl ApplyReproduction for ReproductionFn {
                     let (a, b) = a.iter().zip(b).enumerate().fold(
                         ([0u8; 9], [0u8; 9]),
                         |(mut a, mut b), (ix, (&a_val, &b_val))| {
-                            let (new_a_val, new_b_val) = if context.rng().gen_bool(0.5) {
-                                (a_val, b_val)
-                            } else {
-                                (b_val, a_val)
-                            };
+                            let (new_a_val, new_b_val) =
+                                if context.rng().lock().unwrap().gen_bool(0.5) {
+                                    (a_val, b_val)
+                                } else {
+                                    (b_val, a_val)
+                                };
                             a[ix] = new_a_val;
                             b[ix] = new_b_val;
                             (a, b)
@@ -511,23 +514,25 @@ fn main() {
         );
     }
 
-    let create_subject_fn = Box::new(|ga_context: &GaContext<'_, ThreadRng>| {
+    let create_subject_fn = Box::new(|ga_context: &mut GaContext<'_, ThreadRng>| {
         let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
         let board = &mut wrapped_board.board.0;
-        if ga_context.rng().gen_bool(0.1) {
+        let rng = ga_context.rng();
+        let mut rng = rng.lock().expect("failed to get lock on rng");
+        if rng.gen_bool(0.1) {
             for row in board.iter_mut() {
                 for col in row.iter_mut() {
-                    *col = ga_context.rng().gen_range(1..=9);
+                    *col = rng.gen_range(1..=9);
                 }
             }
-        } else if ga_context.rng().gen_bool(0.75) {
+        } else if rng.gen_bool(0.75) {
             const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
             for row in board.iter_mut() {
                 *row = FULL;
-                if ga_context.rng().gen_bool(0.5) {
-                    row.rotate_left(ga_context.rng().gen_range(0..9));
+                if rng.gen_bool(0.5) {
+                    row.rotate_left(rng.gen_range(0..9));
                 } else {
-                    row.rotate_left(ga_context.rng().gen_range(0..9));
+                    row.rotate_left(rng.gen_range(0..9));
                 }
             }
         }

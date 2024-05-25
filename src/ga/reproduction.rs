@@ -44,14 +44,21 @@ pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>
     population: &mut Population<Reproducer::Subject>,
     options: &ApplyReproductionOptions<Reproducer>,
 ) {
+    let rng = context.rng().clone();
     let mut appended_subjects = vec![];
     // TODO: we probably need criteria on who can reproduce with who
     for (subject_a, subject_b) in population
-        .select_front_bias_random(*context.rng(), options.reproduction_limit)
+        .select_front_bias_random(
+            *rng.lock().expect("failed to get lock on rng"),
+            options.reproduction_limit,
+        )
         .iter()
         .tuple_windows()
     {
-        if !coin_flip(*context.rng(), options.overall_reproduction_chance) {
+        if !coin_flip(
+            *rng.lock().expect("failed to get lock on rng"),
+            options.overall_reproduction_chance,
+        ) {
             continue;
         }
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
@@ -70,10 +77,16 @@ pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>
 
         if options.multi_reproduction {
             for weighted_action in options.reproduction_actions.iter() {
-                if !coin_flip(*context.rng(), weighted_action.weight) {
+                if !coin_flip(
+                    *rng.lock().expect("failed to get lock on rng"),
+                    weighted_action.weight,
+                ) {
                     continue;
                 }
-                do_reproduction(*context.rng(), &weighted_action.action);
+                do_reproduction(
+                    *rng.lock().expect("failed to get lock on rng"),
+                    &weighted_action.action,
+                );
             }
         } else {
             let weights: Vec<f64> = options
@@ -85,8 +98,11 @@ pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(*context.rng());
-            do_reproduction(*context.rng(), &options.reproduction_actions[index].action);
+            let index = dist.sample(*rng.lock().expect("failed to get lock on rng"));
+            do_reproduction(
+                *rng.lock().expect("failed to get lock on rng"),
+                &options.reproduction_actions[index].action,
+            );
         }
     }
     population.subjects.extend(appended_subjects);

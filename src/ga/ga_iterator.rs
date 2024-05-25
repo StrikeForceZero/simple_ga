@@ -105,7 +105,7 @@ impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
 where
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&GaContext<'rng, RandNumGen>) -> Subject,
+    CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
@@ -153,6 +153,7 @@ where
     }
 
     pub fn next_generation(&mut self) -> Option<Fitness> {
+        let rng = self.state.context.rng().clone();
         self.state.generation += 1;
         let generation_ix = self.state.generation;
         let target_fitness = self.options.target_fitness();
@@ -189,11 +190,11 @@ where
                 return None;
             }
         }
-        PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
-            .prune_random(
-                &mut self.state.population.subjects,
-                *self.state.context.rng(),
-            );
+        {
+            let mut rng = rng.lock().expect("failed to get lock on rng");
+            PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
+                .prune_random(&mut self.state.population.subjects, *rng);
+        }
         apply_reproductions(
             &mut self.state.context,
             &mut self.state.population,
@@ -239,7 +240,7 @@ where
             }
         }
         while self.state.population.subjects.len() < self.state.population.pool_size {
-            let new_subject = (&self.options.create_subject_fn)(&self.state.context);
+            let new_subject = (&self.options.create_subject_fn)(&mut self.state.context);
             let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
             if fitness_wrapped.fitness() == self.options.target_fitness() {
                 warn!("created a subject that measures at the target fitness {} in generation {generation_ix}", self.options.target_fitness());

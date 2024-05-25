@@ -23,7 +23,11 @@ pub struct ApplyMutationOptions<Mutator> {
 
 pub trait ApplyMutation {
     type Subject;
-    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject;
+    fn apply(
+        &self,
+        context: &mut GaContext<'_, impl Rng>,
+        subject: &Self::Subject,
+    ) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
@@ -32,9 +36,13 @@ pub fn apply_mutations<'rng, RandNumGen: Rng, Mutator: ApplyMutation>(
     population: &mut Population<Mutator::Subject>,
     options: &ApplyMutationOptions<Mutator>,
 ) {
+    let rng = context.rng().clone();
     let mut appended_subjects = vec![];
     for wrapped_subject in population.subjects.iter_mut() {
-        if !coin_flip(*context.rng(), options.overall_mutation_chance) {
+        if !coin_flip(
+            *rng.lock().expect("failed to get lock on rng"),
+            options.overall_mutation_chance,
+        ) {
             continue;
         }
         let mut do_mutation = |context: &mut GaContext<'rng, RandNumGen>, mutator: &Mutator| {
@@ -50,7 +58,10 @@ pub fn apply_mutations<'rng, RandNumGen: Rng, Mutator: ApplyMutation>(
         };
         if options.multi_mutation {
             for weighted_action in options.mutation_actions.iter() {
-                if !coin_flip(*context.rng(), weighted_action.weight) {
+                if !coin_flip(
+                    *rng.lock().expect("failed to get lock on rng"),
+                    weighted_action.weight,
+                ) {
                     continue;
                 }
                 do_mutation(context, &weighted_action.action);
@@ -65,7 +76,7 @@ pub fn apply_mutations<'rng, RandNumGen: Rng, Mutator: ApplyMutation>(
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(*context.rng());
+            let index = dist.sample(*rng.lock().expect("failed to get lock on rng"));
             do_mutation(context, &options.mutation_actions[index].action);
         }
     }

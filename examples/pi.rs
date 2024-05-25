@@ -91,22 +91,24 @@ enum MutatorFns {
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
 
-    fn apply(&self, context: &GaContext<'_, impl Rng>, subject: &Self::Subject) -> Self::Subject {
+    fn apply(
+        &self,
+        context: &mut GaContext<'_, impl Rng>,
+        subject: &Self::Subject,
+    ) -> Self::Subject {
         let subject_f64 = subject.as_f64();
+        let rng = context.rng();
+        let mut rng = rng.lock().expect("failed to get rng lock");
         let mutated_result = match self {
             MutatorFns::AddOne => subject_f64 + 1.0,
             MutatorFns::SubOne => subject_f64 - 1.0,
-            MutatorFns::AddRandom => subject_f64 + random_f64(*context.rng()),
-            MutatorFns::SubRandom => subject_f64 - random_f64(*context.rng()),
-            MutatorFns::AddRandomPosOne => {
-                random_pos_add(subject_f64, context.rng().gen_range(0..16), 1)
-            }
-            MutatorFns::SubRandomPosOne => {
-                random_pos_add(subject_f64, context.rng().gen_range(0..16), -1)
-            }
+            MutatorFns::AddRandom => subject_f64 + random_f64(*rng),
+            MutatorFns::SubRandom => subject_f64 - random_f64(*rng),
+            MutatorFns::AddRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), 1),
+            MutatorFns::SubRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), -1),
             MutatorFns::Truncate => subject_f64.trunc(),
             MutatorFns::RandTruncate => {
-                let offset = context.rng().gen_range(1..=6) as f64;
+                let offset = rng.gen_range(1..=6) as f64;
                 (subject_f64 * offset).trunc() / offset
             }
         };
@@ -223,8 +225,10 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn = Box::new(|context: &GaContext<'_, ThreadRng>| -> Subject {
-        random_f64(*context.rng()).into()
+    let create_subject_fn = Box::new(|context: &mut GaContext<'_, ThreadRng>| -> Subject {
+        let rng = context.rng();
+        let mut rng = rng.lock().expect("failed to get lock on rng");
+        random_f64(*rng).into()
     });
 
     let generation_loop_options = GeneticAlgorithmOptions {

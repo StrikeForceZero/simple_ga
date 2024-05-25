@@ -40,7 +40,7 @@ where
         population: Population<Subject>,
     ) where
         RandNumGen: Rng,
-        CreateSubjectFn: Fn(&GaContext<'rng, RandNumGen>) -> Subject,
+        CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
         Mutator: ApplyMutation<Subject = Subject>,
         Reproducer: ApplyReproduction<Subject = Subject>,
     {
@@ -72,7 +72,7 @@ pub fn ga_runner<
     'rng,
     RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&GaContext<'rng, RandNumGen>) -> Subject,
+    CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 >(
