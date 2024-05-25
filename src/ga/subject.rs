@@ -14,3 +14,9 @@ impl<T: Debug + Clone> Debug for Subject<T> {
             .finish()
     }
 }
+
+#[cfg(not(feature = "parallel"))]
+pub trait GaSubject {}
+
+#[cfg(feature = "parallel")]
+pub trait GaSubject: Send + Sync {}
