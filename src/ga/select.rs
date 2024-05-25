@@ -123,8 +123,6 @@ impl<T> SelectRandom<T> for SelectRandomManyWithBias {
 
 #[cfg(test)]
 mod tests {
-    use simple_ga_internal_lib::test_rng::rng;
-
     use super::*;
 
     mod select_random_with_bias {
@@ -136,7 +134,7 @@ mod tests {
             struct Foo(usize);
             let foo = Foo(1);
             let items = [foo];
-            let selected = SelectRandomWithBias::new(Bias::Front).select_random(&mut rng(), items);
+            let selected = SelectRandomWithBias::new(Bias::Front).select_random(items);
             assert_eq!(selected, Some(Foo(1)));
         }
 
@@ -146,7 +144,7 @@ mod tests {
             struct Foo(usize);
             let foo = Foo(1);
             let items = &[foo];
-            let selected = SelectRandomWithBias::new(Bias::Front).select_random(&mut rng(), items);
+            let selected = SelectRandomWithBias::new(Bias::Front).select_random(items);
             assert_eq!(selected, Some(Foo(1)).as_ref());
         }
 
@@ -156,7 +154,7 @@ mod tests {
             struct Foo(usize);
             let mut foo = Foo(1);
             let items = [&mut foo];
-            let selected = SelectRandomWithBias::new(Bias::Front).select_random(&mut rng(), items);
+            let selected = SelectRandomWithBias::new(Bias::Front).select_random(items);
             let Some(selected) = selected else {
                 unreachable!();
             };
@@ -175,7 +173,7 @@ mod tests {
         fn test_select_random_indexes() {
             let items = 0..1000000;
             let select = SelectRandomManyWithBias::new(items.len() - 1, Bias::Front)
-                .select_random_indexes(&mut rng(), items.len());
+                .select_random_indexes(items.len());
             assert_eq!(select.len(), items.len() - 1);
         }
 
@@ -184,8 +182,7 @@ mod tests {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
             let items = [Foo(1), Foo(1), Foo(1)];
-            let selected =
-                SelectRandomManyWithBias::new(2, Bias::Front).select_random(&mut rng(), items);
+            let selected = SelectRandomManyWithBias::new(2, Bias::Front).select_random(items);
             assert_eq!(selected, vec![Foo(1), Foo(1)]);
         }
 
@@ -195,15 +192,13 @@ mod tests {
             struct Foo(usize);
             let foo = Foo(1);
             let items = [&foo];
-            let selected =
-                SelectRandomManyWithBias::new(2, Bias::Front).select_random(&mut rng(), items);
+            let selected = SelectRandomManyWithBias::new(2, Bias::Front).select_random(items);
             assert_eq!(selected, vec![&foo]);
         }
 
         #[test]
         fn test_select_random_range() {
-            let selected =
-                SelectRandomManyWithBias::new(8, Bias::Front).select_random(&mut rng(), 0..10);
+            let selected = SelectRandomManyWithBias::new(8, Bias::Front).select_random(0..10);
             assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), 8);
         }
 
@@ -211,8 +206,8 @@ mod tests {
         fn test_select_random_range_a() {
             let len = 50000;
             let expected = len / 2 - 1;
-            let selected = SelectRandomManyWithBias::new(expected, Bias::Front)
-                .select_random(&mut rng(), 0..len);
+            let selected =
+                SelectRandomManyWithBias::new(expected, Bias::Front).select_random(0..len);
             assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), expected);
         }
 
@@ -220,8 +215,8 @@ mod tests {
         fn test_select_random_range_b() {
             let len = 50000;
             let expected = len / 2 + 1;
-            let selected = SelectRandomManyWithBias::new(expected, Bias::Front)
-                .select_random(&mut rng(), 0..len);
+            let selected =
+                SelectRandomManyWithBias::new(expected, Bias::Front).select_random(0..len);
             assert_eq!(selected.into_iter().collect::<HashSet<_>>().len(), expected);
         }
 
@@ -230,8 +225,7 @@ mod tests {
             #[derive(Debug, PartialEq)]
             struct Foo(usize);
             let items = [&mut Foo(1), &mut Foo(1)];
-            let mut selected =
-                SelectRandomManyWithBias::new(2, Bias::Front).select_random(&mut rng(), items);
+            let mut selected = SelectRandomManyWithBias::new(2, Bias::Front).select_random(items);
             {
                 let Some(selected) = selected.get_mut(0) else {
                     unreachable!();

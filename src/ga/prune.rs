@@ -49,8 +49,6 @@ impl<T> PruneRandom<Vec<T>> for PruneExtraSkipFirst {
 
 #[cfg(test)]
 mod tests {
-    use simple_ga_internal_lib::test_rng::rng;
-
     use super::*;
 
     mod single_skip_first {
@@ -58,7 +56,6 @@ mod tests {
 
         #[test]
         fn test_prune_random() {
-            let rng = &mut rng();
             let mut items = vec![1, 2, 3];
             PruneSingleSkipFirst.prune_random(&mut items);
             PruneSingleSkipFirst.prune_random(&mut items);
@@ -71,7 +68,6 @@ mod tests {
 
         #[test]
         fn test_prune_random() {
-            let rng = &mut rng();
             let mut items = vec![1, 2, 3];
             PruneExtraSkipFirst::new(1).prune_random(&mut items);
             assert_eq!(items, vec![1]);

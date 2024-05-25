@@ -104,6 +104,7 @@ pub(crate) mod iter {
 }
 
 pub mod rng {
+    #[cfg(not(test))]
     use rand::prelude::ThreadRng;
 
     #[cfg(test)]
