@@ -8,7 +8,7 @@ authors = ["Brett Striker <strikeforcezero@gmail.com>"]
 members = ["crates/*"]
 
 [features]
-parallel = ["dep:rayon"]
+parallel = ["dep:rayon", "dep:dashmap"]
 
 [dev-dependencies]
 simple_ga_internal_lib = { path = "crates/simple_ga_internal_lib" }
@@ -23,6 +23,7 @@ tracing = { version = "0.1", features = ["log"] }
 derivative = "2.2"
 statrs = "0.16"
 rayon = { version = "1", optional = true }
+dashmap = { version = "5", optional = true, features = ["rayon"] }
 
 [[example]]
 name = "pi"
