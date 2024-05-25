@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use derivative::Derivative;
 
@@ -13,20 +13,20 @@ pub type CalculateFitnessFn<'a, Subject> = Box<dyn Fn(&Subject) -> Fitness + 'a>
 pub struct FitnessWrapped<Subject> {
     fitness: Fitness,
     #[derivative(PartialEq = "ignore")]
-    subject: Rc<Subject>,
+    subject: Arc<Subject>,
 }
 
 impl<Subject> FitnessWrapped<Subject> {
     pub fn new(subject: Subject, fitness: Fitness) -> Self {
         FitnessWrapped {
             fitness,
-            subject: Rc::new(subject),
+            subject: Arc::new(subject),
         }
     }
     pub fn fitness(&self) -> Fitness {
         self.fitness
     }
-    pub fn subject(&self) -> Rc<Subject> {
+    pub fn subject(&self) -> Arc<Subject> {
         self.subject.clone()
     }
 }

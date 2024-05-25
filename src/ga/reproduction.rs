@@ -7,6 +7,7 @@ use rand::distributions::{Distribution, WeightedIndex};
 use crate::ga::{GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
+use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
 
 pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
@@ -28,7 +29,7 @@ pub struct ApplyReproductionOptions<Reproducer> {
 }
 
 pub trait ApplyReproduction {
-    type Subject: Hash + PartialEq + Eq;
+    type Subject: GaSubject + Hash + PartialEq + Eq;
     fn apply(
         &self,
         context: &GaContext,

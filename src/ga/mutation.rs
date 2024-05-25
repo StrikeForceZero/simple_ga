@@ -4,6 +4,7 @@ use rand::distributions::{Distribution, WeightedIndex};
 use crate::ga::{GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
+use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
 
 #[derive(Derivative, Clone, Default)]
@@ -21,7 +22,7 @@ pub struct ApplyMutationOptions<Mutator> {
 }
 
 pub trait ApplyMutation {
-    type Subject;
+    type Subject: GaSubject;
     fn apply(&self, context: &GaContext, subject: &Self::Subject) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }

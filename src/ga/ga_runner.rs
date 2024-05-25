@@ -9,6 +9,7 @@ use crate::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
 use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
 use crate::ga::reproduction::ApplyReproduction;
+use crate::ga::subject::GaSubject;
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
@@ -27,7 +28,7 @@ where
 
 impl<Subject> GaRunner<Subject>
 where
-    Subject: Fit<Fitness> + Hash + PartialEq + Eq,
+    Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
 {
     pub fn new(runner_options: GaRunnerOptions<Subject>) -> Self {
         Self { runner_options }
@@ -66,7 +67,7 @@ where
 }
 
 pub fn ga_runner<
-    Subject: Fit<Fitness> + Hash + PartialEq + Eq,
+    Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     CreateSubjectFn: Fn(&GaContext) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,

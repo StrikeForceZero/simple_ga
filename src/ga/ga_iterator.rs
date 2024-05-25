@@ -1,9 +1,7 @@
-use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
 use derivative::Derivative;
-use itertools::Itertools;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use tracing::info;
@@ -15,6 +13,7 @@ use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction};
+use crate::ga::subject::GaSubject;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -99,7 +98,7 @@ pub struct GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer> {
 impl<Subject, CreateSubjectFn, Mutator, Reproducer>
     GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer>
 where
-    Subject: Fit<Fitness> + Hash + PartialEq + Eq,
+    Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     CreateSubjectFn: Fn(&GaContext) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
@@ -199,37 +198,59 @@ where
             &self.options.mutation_options,
         );
         if self.options.remove_duplicates {
-            let mut indexes_to_delete: HashSet<usize> = HashSet::new();
-            for (a_ix, a_subject) in self.state.population.iter().enumerate() {
-                if indexes_to_delete.contains(&a_ix) {
-                    continue;
-                }
-                for (b_ix, b_subject) in self.state.population.iter().enumerate() {
-                    if a_ix == b_ix || indexes_to_delete.contains(&b_ix) {
-                        continue;
+            #[cfg(feature = "parallel")]
+            let indexes_to_delete = {
+                use dashmap::DashSet;
+                DashSet::new()
+            };
+            #[cfg(not(feature = "parallel"))]
+            let mut indexes_to_delete = {
+                use std::collections::HashSet;
+                HashSet::new()
+            };
+
+            self.state
+                .population
+                .iter()
+                .enumerate()
+                .for_each(|(a_ix, a_subject)| {
+                    if indexes_to_delete.contains(&a_ix) {
+                        return;
                     }
-                    if b_subject.fitness() == a_subject.fitness()
-                        && b_subject.subject() == a_subject.subject()
-                    {
-                        indexes_to_delete.insert(b_ix);
-                    }
-                }
-            }
+                    self.state
+                        .population
+                        .iter()
+                        .enumerate()
+                        .for_each(|(b_ix, b_subject)| {
+                            if a_ix == b_ix || indexes_to_delete.contains(&b_ix) {
+                                return;
+                            }
+                            if b_subject.fitness() == a_subject.fitness()
+                                && b_subject.subject() == a_subject.subject()
+                            {
+                                indexes_to_delete.insert(b_ix);
+                            }
+                        });
+                });
             let indexes_to_delete = {
                 #[cfg(feature = "parallel")]
                 {
-                    indexes_to_delete.par_iter().par_sort_unstable().rev()
+                    let mut indexes_to_delete =
+                        indexes_to_delete.into_par_iter().collect::<Vec<_>>();
+                    indexes_to_delete.par_sort_unstable();
+                    indexes_to_delete
                 }
                 #[cfg(not(feature = "parallel"))]
                 {
-                    indexes_to_delete.iter().sorted().rev()
+                    use itertools::Itertools;
+                    indexes_to_delete.into_iter().sorted()
                 }
             };
-            for ix in indexes_to_delete {
+            for ix in indexes_to_delete.into_iter().rev() {
                 if self.state.population.subjects.len() <= self.state.population.pool_size {
-                    break;
+                    continue;
                 }
-                self.state.population.subjects.remove(*ix);
+                self.state.population.subjects.remove(ix);
             }
         }
         while self.state.population.subjects.len() < self.state.population.pool_size {

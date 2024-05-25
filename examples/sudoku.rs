@@ -12,6 +12,7 @@ use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
+use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
@@ -363,6 +364,8 @@ impl WrappedBoard {
         }
     }
 }
+
+impl GaSubject for WrappedBoard {}
 
 impl Fit<Fitness> for WrappedBoard {
     fn measure(&self) -> Fitness {

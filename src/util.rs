@@ -63,46 +63,6 @@ pub fn random_index_bias(len: usize, bias: Bias) -> usize {
     _random_index_bias(x, len, bias)
 }
 
-pub(crate) mod iter {
-    #[cfg(feature = "parallel")]
-    use rayon::prelude::*;
-
-    pub trait FeatureBasedIntoIter {
-        type Item;
-        type IntoIter: Iterator<Item = Self::Item> + ExactSizeIterator;
-
-        fn feature_based_into_iter(self) -> Self::IntoIter;
-    }
-
-    #[cfg(not(feature = "parallel"))]
-    impl<Iter> FeatureBasedIntoIter for Iter
-    where
-        Iter: IntoIterator,
-        Iter::IntoIter: ExactSizeIterator,
-    {
-        type Item = Iter::Item;
-        type IntoIter = Iter::IntoIter;
-
-        fn feature_based_into_iter(self) -> Self::IntoIter {
-            self.into_iter()
-        }
-    }
-
-    #[cfg(feature = "parallel")]
-    impl<Iter> FeatureBasedIntoIter for Iter
-    where
-        Iter: IntoParallelIterator,
-        Iter::Iter: ExactSizeIterator,
-    {
-        type Item = Iter::Item;
-        type IntoIter = Iter::Iter;
-
-        fn feature_based_into_iter(self) -> Self::IntoIter {
-            self.into_par_iter()
-        }
-    }
-}
-
 pub mod rng {
     #[cfg(not(test))]
     use rand::prelude::ThreadRng;

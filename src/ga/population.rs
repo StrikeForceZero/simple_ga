@@ -5,11 +5,16 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 #[cfg(feature = "parallel")]
-use rayon::prelude::*;
+use rayon::{
+    prelude::*,
+    slice::{Iter, IterMut},
+    vec::IntoIter,
+};
 
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
 use crate::ga::select::{SelectRandom, SelectRandomManyWithBias};
+use crate::ga::subject::GaSubject;
 use crate::util::Bias;
 
 #[derive(Clone, Default)]
@@ -38,7 +43,7 @@ impl<Subject: Display> Display for Population<Subject> {
     }
 }
 
-impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
+impl<Subject: GaSubject + Hash + Eq + PartialEq> Population<Subject> {
     pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(&mut self, pruner: P) {
         pruner.prune_random(&mut self.subjects);
     }
@@ -72,7 +77,7 @@ impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
 #[cfg(not(feature = "parallel"))]
 impl<Subject> Population<Subject>
 where
-    Subject: Hash + Eq + PartialEq,
+    Subject: GaSubject + Hash + Eq + PartialEq,
 {
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
@@ -104,7 +109,7 @@ where
 #[cfg(feature = "parallel")]
 impl<Subject> Population<Subject>
 where
-    Subject: Hash + Eq + PartialEq,
+    Subject: GaSubject + Hash + Eq + PartialEq,
 {
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
@@ -115,19 +120,29 @@ where
         population.par_sort_by(Self::_sort_rev);
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
+    pub fn iter(&self) -> Iter<FitnessWrapped<Subject>> {
         self.subjects.par_iter()
     }
-    pub fn iter_reverse(&self) -> impl Iterator<Item = &FitnessWrapped<Subject>> {
-        self.iter().rev()
+    pub fn iter_reverse(&self) -> IntoIter<&FitnessWrapped<Subject>> {
+        self.iter()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .into_par_iter()
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
+    pub fn iter_mut(&mut self) -> IterMut<FitnessWrapped<Subject>> {
         self.subjects.par_iter_mut()
     }
 
-    pub fn iter_reverse_mut(&mut self) -> impl Iterator<Item = &mut FitnessWrapped<Subject>> {
-        self.iter_mut().rev()
+    pub fn iter_reverse_mut(&mut self) -> IntoIter<&mut FitnessWrapped<Subject>> {
+        self.iter_mut()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .into_par_iter()
     }
 }
 

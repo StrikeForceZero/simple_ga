@@ -13,6 +13,7 @@ use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
 };
+use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
 
 lazy_static! {
@@ -87,6 +88,8 @@ enum MutatorFns {
     Truncate,
     RandTruncate,
 }
+
+impl GaSubject for Subject {}
 
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
