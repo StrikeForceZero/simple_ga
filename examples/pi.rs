@@ -222,7 +222,7 @@ fn main() {
     let create_subject_fn =
         Box::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
 
-    let generation_loop_options = GeneticAlgorithmOptions {
+    let ga_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
@@ -267,7 +267,7 @@ fn main() {
     });
 
     info!("starting generation loop");
-    ga_runner(generation_loop_options, ga_runner_options, population);
+    ga_runner(ga_options, ga_runner_options, population);
     info!("done")
 }
 

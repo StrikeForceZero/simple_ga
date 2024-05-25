@@ -532,7 +532,7 @@ fn main() {
         wrapped_board
     });
 
-    let generation_loop_options = GeneticAlgorithmOptions {
+    let ga_options = GeneticAlgorithmOptions {
         remove_duplicates: true,
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
         fitness_range: target_fitness..MAX_FITNESS,
@@ -567,7 +567,7 @@ fn main() {
     });
 
     info!("starting generation loop");
-    ga_runner(generation_loop_options, ga_runner_options, population);
+    ga_runner(ga_options, ga_runner_options, population);
     info!("done")
 }
 
