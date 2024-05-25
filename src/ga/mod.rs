@@ -1,15 +1,12 @@
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
-use std::sync::{Arc, Mutex};
 use std::usize;
 
 use derivative::Derivative;
-use rand::Rng;
-
-use population::Population;
 
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::mutation::ApplyMutationOptions;
+use crate::ga::population::Population;
 use crate::ga::reproduction::ApplyReproductionOptions;
 use crate::util::Odds;
 
@@ -32,12 +29,11 @@ pub struct CreatePopulationOptions<SubjectFn> {
     pub create_subject_fn: SubjectFn,
 }
 
-pub fn create_population_pool<'rng, Subject: Fit<Fitness>, RandNumGen: Rng>(
-    rng: &'rng mut RandNumGen,
-    options: CreatePopulationOptions<impl Fn(&mut GaContext<'rng, RandNumGen>) -> Subject>,
+pub fn create_population_pool<Subject: Fit<Fitness>>(
+    options: CreatePopulationOptions<impl Fn(&GaContext) -> Subject>,
 ) -> Population<Subject> {
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
-    let mut context = GaContext::new(rng);
+    let mut context = GaContext::default();
     for _ in 0..options.population_size {
         let subject = (options.create_subject_fn)(&mut context);
         subjects.push(FitnessWrapped::from(subject));
@@ -92,28 +88,7 @@ impl<CreateSubjectFn, Mutator, Reproducer>
     }
 }
 
-pub struct GaContext<'rng, RandNumGen>
-where
-    RandNumGen: Rng,
-{
-    pub(self) rng: Arc<Mutex<&'rng mut RandNumGen>>,
+#[derive(Debug, Default)]
+pub struct GaContext {
     pub generation: usize,
-}
-
-impl<'rng, RandNumGen> GaContext<'rng, RandNumGen>
-where
-    RandNumGen: Rng,
-{
-    pub fn new(rng: &'rng mut RandNumGen) -> Self {
-        Self {
-            rng: Arc::new(Mutex::new(rng)),
-            generation: 0,
-        }
-    }
-    pub fn rng(&self) -> Arc<Mutex<&'rng mut RandNumGen>> {
-        self.rng.clone()
-    }
-    pub fn generation(&self) -> usize {
-        self.generation
-    }
 }

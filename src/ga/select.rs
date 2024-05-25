@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use itertools::Itertools;
-use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -10,12 +9,10 @@ use crate::util::{Bias, random_index_bias};
 pub trait SelectRandom<T> {
     type Output;
     fn select_random<
-        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output;
 }
@@ -37,17 +34,15 @@ impl SelectRandomWithBias {
 impl<T> SelectRandom<T> for SelectRandomWithBias {
     type Output = Option<T>;
     fn select_random<
-        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output {
         use crate::util::iter::FeatureBasedIntoIter;
         let mut items = items.feature_based_into_iter();
-        items.nth(random_index_bias(rng, items.len(), self.bias))
+        items.nth(random_index_bias(items.len(), self.bias))
     }
 }
 
@@ -67,11 +62,7 @@ impl SelectRandomManyWithBias {
     pub fn bias(&self) -> &Bias {
         &self.bias
     }
-    fn select_random_indexes<RandNumGen: Rng>(
-        &self,
-        rng: &mut RandNumGen,
-        len: usize,
-    ) -> HashSet<usize> {
+    fn select_random_indexes(&self, len: usize) -> HashSet<usize> {
         use crate::util::iter::FeatureBasedIntoIter;
         let max_amount = self.amount.min(len);
         // not enough items just return the original slice as a new vec
@@ -80,32 +71,30 @@ impl SelectRandomManyWithBias {
         } else if (max_amount as f32 / len as f32) < 0.5 {
             let mut selected_indexes = HashSet::new();
             while selected_indexes.len() < max_amount {
-                selected_indexes.insert(random_index_bias(rng, len, self.bias));
+                selected_indexes.insert(random_index_bias(len, self.bias));
             }
             selected_indexes.feature_based_into_iter().collect()
         } else {
             // it'll be faster to remove indexes randomly until we get the desired size
             let mut selected_indexes = (0..len).collect::<HashSet<_>>();
             while selected_indexes.len() > max_amount {
-                selected_indexes.remove(&random_index_bias(rng, len, self.bias.inverse()));
+                selected_indexes.remove(&random_index_bias(len, self.bias.inverse()));
             }
             selected_indexes.feature_based_into_iter().collect()
         }
     }
     fn select_random<
-        RandNumGen: Rng,
         T,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut RandNumGen,
         items: Iter,
     ) -> Vec<T> {
         use crate::util::iter::FeatureBasedIntoIter;
         let mut items = items.into_iter();
         let (_, data) = self
-            .select_random_indexes(rng, items.len())
+            .select_random_indexes(items.len())
             .feature_based_into_iter()
             .sorted()
             .fold((0, vec![]), |(skipped, mut data), next_ix| {
@@ -122,15 +111,13 @@ impl SelectRandomManyWithBias {
 impl<T> SelectRandom<T> for SelectRandomManyWithBias {
     type Output = Vec<T>;
     fn select_random<
-        RandNumGen: Rng,
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
         Iter2: Iterator<Item = T> + ExactSizeIterator,
     >(
         self,
-        rng: &mut RandNumGen,
         items: Iter,
     ) -> Self::Output {
-        self.select_random(rng, items)
+        self.select_random(items)
     }
 }
 

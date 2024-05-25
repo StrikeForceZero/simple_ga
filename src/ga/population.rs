@@ -4,7 +4,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 use itertools::Itertools;
-use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -40,37 +39,21 @@ impl<Subject: Display> Display for Population<Subject> {
 }
 
 impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
-    pub fn prune_random<RandNumGen: Rng, P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(
-        &mut self,
-        pruner: P,
-        rng: &mut RandNumGen,
-    ) {
-        pruner.prune_random(&mut self.subjects, rng);
+    pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(&mut self, pruner: P) {
+        pruner.prune_random(&mut self.subjects);
     }
-    pub fn select_random<'a, RandNumGen: Rng, S>(
-        &'a self,
-        rng: &mut RandNumGen,
-        selector: S,
-    ) -> S::Output
+    pub fn select_random<'a, S>(&'a self, selector: S) -> S::Output
     where
         S: SelectRandom<&'a FitnessWrapped<Subject>>,
         Subject: 'a,
     {
-        selector.select_random(rng, &self.subjects)
+        selector.select_random(&self.subjects)
     }
-    pub fn select_front_bias_random<RandNumGen: Rng>(
-        &self,
-        rng: &mut RandNumGen,
-        limit: usize,
-    ) -> Vec<&FitnessWrapped<Subject>> {
-        SelectRandomManyWithBias::new(limit, Bias::Front).select_random(rng, &self.subjects)
+    pub fn select_front_bias_random(&self, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
+        SelectRandomManyWithBias::new(limit, Bias::Front).select_random(&self.subjects)
     }
-    pub fn select_back_bias_random<RandNumGen: Rng>(
-        &self,
-        rng: &mut RandNumGen,
-        limit: usize,
-    ) -> Vec<&FitnessWrapped<Subject>> {
-        SelectRandomManyWithBias::new(limit, Bias::Back).select_random(rng, &self.subjects)
+    pub fn select_back_bias_random(&self, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
+        SelectRandomManyWithBias::new(limit, Bias::Back).select_random(&self.subjects)
     }
 
     fn _sort(a: &FitnessWrapped<Subject>, b: &FitnessWrapped<Subject>) -> Ordering {
@@ -158,7 +141,7 @@ mod tests {
     use crate::ga::population::Population;
     use crate::ga::prune::PruneSingleSkipFirst;
     use crate::ga::select::SelectRandomManyWithBias;
-    use crate::util::Bias;
+    use crate::util::{Bias, rng};
 
     fn test_subject(id: u32) -> FitnessWrapped<u32> {
         FitnessWrapped::new(id, id as Fitness)
@@ -182,7 +165,7 @@ mod tests {
         let size = 3;
         let mut population = make_population(size);
         for n in 1..3 {
-            population.prune_random(PruneSingleSkipFirst, &mut rng());
+            population.prune_random(PruneSingleSkipFirst, &mut rng::thread_rng());
             assert_eq!(population.subjects.len(), size - n);
         }
     }

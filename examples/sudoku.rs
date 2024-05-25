@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
-use rand::{Rng, thread_rng};
 use rand::prelude::{IteratorRandom, SliceRandom};
-use rand::rngs::ThreadRng;
+use rand::Rng;
 use tracing::{debug, info};
 
 use simple_ga::ga::{
@@ -13,6 +12,7 @@ use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
+use simple_ga::util::rng;
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 struct SudokuValidationGroup {
@@ -379,13 +379,8 @@ enum MutatorFn {
 impl ApplyMutation for MutatorFn {
     type Subject = WrappedBoard;
 
-    fn apply(
-        &self,
-        context: &mut GaContext<'_, impl Rng>,
-        subject: &Self::Subject,
-    ) -> Self::Subject {
-        let rng = context.rng();
-        let mut rng = rng.lock().expect("failed to get lock on rng");
+    fn apply(&self, context: &GaContext, subject: &Self::Subject) -> Self::Subject {
+        let rng = &mut rng::thread_rng();
         let mut subject = subject.board.clone();
         fn random_cell(
             rng: &mut impl Rng,
@@ -407,7 +402,7 @@ impl ApplyMutation for MutatorFn {
         WrappedBoard::create_mutation(
             match self {
                 Self::RotateRow => {
-                    let Some(random_row) = subject.0.choose_mut(*rng) else {
+                    let Some(random_row) = subject.0.choose_mut(rng) else {
                         unreachable!();
                     };
                     if rng.gen_bool(0.5) {
@@ -418,7 +413,7 @@ impl ApplyMutation for MutatorFn {
                     subject
                 }
                 Self::RandomFill => {
-                    let Some((row, col, _)) = random_cell(*rng, &subject, |cell| cell == 0) else {
+                    let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell == 0) else {
                         return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
@@ -429,7 +424,7 @@ impl ApplyMutation for MutatorFn {
                     subject
                 }
                 Self::RandomOverwrite => {
-                    let Some((row, col, _)) = random_cell(*rng, &subject, |cell| cell > 0) else {
+                    let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell > 0) else {
                         return WrappedBoard::create_mutation(subject, context.generation);
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
@@ -458,10 +453,11 @@ impl ApplyReproduction for ReproductionFn {
 
     fn apply(
         &self,
-        context: &GaContext<'_, impl Rng>,
+        context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
+        let rng = &mut rng::thread_rng();
         let subject_a = &subject_a.board;
         let subject_b = &subject_b.board;
         match self {
@@ -472,12 +468,11 @@ impl ApplyReproduction for ReproductionFn {
                     let (a, b) = a.iter().zip(b).enumerate().fold(
                         ([0u8; 9], [0u8; 9]),
                         |(mut a, mut b), (ix, (&a_val, &b_val))| {
-                            let (new_a_val, new_b_val) =
-                                if context.rng().lock().unwrap().gen_bool(0.5) {
-                                    (a_val, b_val)
-                                } else {
-                                    (b_val, a_val)
-                                };
+                            let (new_a_val, new_b_val) = if rng.gen_bool(0.5) {
+                                (a_val, b_val)
+                            } else {
+                                (b_val, a_val)
+                            };
                             a[ix] = new_a_val;
                             b[ix] = new_b_val;
                             (a, b)
@@ -500,7 +495,6 @@ impl ApplyReproduction for ReproductionFn {
 }
 
 fn main() {
-    let rng = &mut thread_rng();
     let population_size = 50;
     simple_ga_internal_lib::tracing::init_tracing();
     let target_fitness = 0.0;
@@ -514,11 +508,10 @@ fn main() {
         );
     }
 
-    let create_subject_fn = Box::new(|ga_context: &mut GaContext<'_, ThreadRng>| {
+    let create_subject_fn = Box::new(|ga_context: &GaContext| {
         let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
         let board = &mut wrapped_board.board.0;
-        let rng = ga_context.rng();
-        let mut rng = rng.lock().expect("failed to get lock on rng");
+        let rng = &mut rng::thread_rng();
         if rng.gen_bool(0.1) {
             for row in board.iter_mut() {
                 for col in row.iter_mut() {
@@ -568,16 +561,13 @@ fn main() {
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
-    let population = create_population_pool(
-        rng,
-        CreatePopulationOptions {
-            population_size,
-            create_subject_fn: create_subject_fn.clone(),
-        },
-    );
+    let population = create_population_pool(CreatePopulationOptions {
+        population_size,
+        create_subject_fn: create_subject_fn.clone(),
+    });
 
     info!("starting generation loop");
-    ga_runner(generation_loop_options, ga_runner_options, population, rng);
+    ga_runner(generation_loop_options, ga_runner_options, population);
     info!("done")
 }
 

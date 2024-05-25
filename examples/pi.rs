@@ -1,8 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
-use rand::{Rng, thread_rng};
-use rand::rngs::ThreadRng;
+use rand::Rng;
 use tracing::info;
 
 use simple_ga::ga::{
@@ -14,6 +13,7 @@ use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
 };
+use simple_ga::util::rng;
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();
@@ -91,19 +91,14 @@ enum MutatorFns {
 impl ApplyMutation for MutatorFns {
     type Subject = Subject;
 
-    fn apply(
-        &self,
-        context: &mut GaContext<'_, impl Rng>,
-        subject: &Self::Subject,
-    ) -> Self::Subject {
+    fn apply(&self, _context: &GaContext, subject: &Self::Subject) -> Self::Subject {
         let subject_f64 = subject.as_f64();
-        let rng = context.rng();
-        let mut rng = rng.lock().expect("failed to get rng lock");
+        let rng = &mut rng::thread_rng();
         let mutated_result = match self {
             MutatorFns::AddOne => subject_f64 + 1.0,
             MutatorFns::SubOne => subject_f64 - 1.0,
-            MutatorFns::AddRandom => subject_f64 + random_f64(*rng),
-            MutatorFns::SubRandom => subject_f64 - random_f64(*rng),
+            MutatorFns::AddRandom => subject_f64 + random_f64(rng),
+            MutatorFns::SubRandom => subject_f64 - random_f64(rng),
             MutatorFns::AddRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), 1),
             MutatorFns::SubRandomPosOne => random_pos_add(subject_f64, rng.gen_range(0..16), -1),
             MutatorFns::Truncate => subject_f64.trunc(),
@@ -132,7 +127,7 @@ impl ApplyReproduction for ReproductionFns {
 
     fn apply(
         &self,
-        _context: &GaContext<'_, impl Rng>,
+        _context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject) {
@@ -214,7 +209,6 @@ fn random_f64(rng: &mut impl Rng) -> f64 {
 }
 
 fn main() {
-    let rng = &mut thread_rng();
     let population_size = 50000;
     simple_ga_internal_lib::tracing::init_tracing();
     let target_fitness = PI_STRING.len() as Fitness;
@@ -225,11 +219,8 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn = Box::new(|context: &mut GaContext<'_, ThreadRng>| -> Subject {
-        let rng = context.rng();
-        let mut rng = rng.lock().expect("failed to get lock on rng");
-        random_f64(*rng).into()
-    });
+    let create_subject_fn =
+        Box::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
 
     let generation_loop_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
@@ -270,16 +261,13 @@ fn main() {
         log_on_mod_zero_for_generation_ix: 1000000,
     };
 
-    let population = create_population_pool(
-        rng,
-        CreatePopulationOptions {
-            population_size,
-            create_subject_fn: create_subject_fn.clone(),
-        },
-    );
+    let population = create_population_pool(CreatePopulationOptions {
+        population_size,
+        create_subject_fn: create_subject_fn.clone(),
+    });
 
     info!("starting generation loop");
-    ga_runner(generation_loop_options, ga_runner_options, population, rng);
+    ga_runner(generation_loop_options, ga_runner_options, population);
     info!("done")
 }
 

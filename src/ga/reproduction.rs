@@ -3,12 +3,11 @@ use std::hash::Hash;
 use derivative::Derivative;
 use itertools::Itertools;
 use rand::distributions::{Distribution, WeightedIndex};
-use rand::Rng;
 
 use crate::ga::{GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
-use crate::util::{coin_flip, Odds};
+use crate::util::{coin_flip, Odds, rng};
 
 pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
     subject.clone()
@@ -32,38 +31,32 @@ pub trait ApplyReproduction {
     type Subject: Hash + PartialEq + Eq;
     fn apply(
         &self,
-        context: &GaContext<'_, impl Rng>,
+        context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> (Self::Subject, Self::Subject);
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>(
-    context: &GaContext<'rng, RandNumGen>,
+pub fn apply_reproductions<Reproducer: ApplyReproduction>(
+    context: &GaContext,
     population: &mut Population<Reproducer::Subject>,
     options: &ApplyReproductionOptions<Reproducer>,
 ) {
-    let rng = context.rng().clone();
+    let rng = &mut rng::thread_rng();
     let mut appended_subjects = vec![];
     // TODO: we probably need criteria on who can reproduce with who
     for (subject_a, subject_b) in population
-        .select_front_bias_random(
-            *rng.lock().expect("failed to get lock on rng"),
-            options.reproduction_limit,
-        )
+        .select_front_bias_random(options.reproduction_limit)
         .iter()
         .tuple_windows()
     {
-        if !coin_flip(
-            *rng.lock().expect("failed to get lock on rng"),
-            options.overall_reproduction_chance,
-        ) {
+        if !coin_flip(options.overall_reproduction_chance) {
             continue;
         }
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
 
-        let mut do_reproduction = |_rng: &mut RandNumGen, reproducer: &Reproducer| {
+        let mut do_reproduction = |reproducer: &Reproducer| {
             let (offspring_a, offspring_b) = reproducer.apply(context, subject_a, subject_b);
             {
                 let fitness = Reproducer::fitness(&offspring_a);
@@ -77,16 +70,10 @@ pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>
 
         if options.multi_reproduction {
             for weighted_action in options.reproduction_actions.iter() {
-                if !coin_flip(
-                    *rng.lock().expect("failed to get lock on rng"),
-                    weighted_action.weight,
-                ) {
+                if !coin_flip(weighted_action.weight) {
                     continue;
                 }
-                do_reproduction(
-                    *rng.lock().expect("failed to get lock on rng"),
-                    &weighted_action.action,
-                );
+                do_reproduction(&weighted_action.action);
             }
         } else {
             let weights: Vec<f64> = options
@@ -98,11 +85,8 @@ pub fn apply_reproductions<'rng, RandNumGen: Rng, Reproducer: ApplyReproduction>
                 continue;
             }
             let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(*rng.lock().expect("failed to get lock on rng"));
-            do_reproduction(
-                *rng.lock().expect("failed to get lock on rng"),
-                &options.reproduction_actions[index].action,
-            );
+            let index = dist.sample(rng);
+            do_reproduction(&options.reproduction_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);

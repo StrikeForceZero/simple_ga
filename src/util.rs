@@ -4,12 +4,12 @@ use rand::Rng;
 pub type Odds = f64;
 
 /// Performs a simple coin flip with specified odds of returning true
-pub fn coin_flip<RandNumGen: Rng>(rng: &mut RandNumGen, odds: Odds) -> bool {
+pub fn coin_flip(odds: Odds) -> bool {
     debug_assert!(
         (0.0..=1.0).contains(&odds),
         "odds must be between 0.0 and 1.0 inclusively, got: {odds}"
     );
-    rng.gen_bool(odds)
+    rng::thread_rng().gen_bool(odds)
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -58,8 +58,8 @@ fn _random_index_bias(x: f64, len: usize, bias: Bias) -> usize {
 }
 
 /// Returns a random index from 0-len with a given bias
-pub fn random_index_bias<RandNumGen: Rng>(rng: &mut RandNumGen, len: usize, bias: Bias) -> usize {
-    let x: f64 = rng.gen_range(0.0..1.0);
+pub fn random_index_bias(len: usize, bias: Bias) -> usize {
+    let x: f64 = rng::thread_rng().gen_range(0.0..1.0);
     _random_index_bias(x, len, bias)
 }
 
@@ -100,6 +100,20 @@ pub(crate) mod iter {
         fn feature_based_into_iter(self) -> Self::IntoIter {
             self.into_par_iter()
         }
+    }
+}
+
+pub mod rng {
+    use rand::prelude::ThreadRng;
+
+    #[cfg(test)]
+    pub fn thread_rng() -> simple_ga_internal_lib::test_rng::MockThreadRng {
+        simple_ga_internal_lib::test_rng::thread_rng()
+    }
+
+    #[cfg(not(test))]
+    pub fn thread_rng() -> ThreadRng {
+        rand::thread_rng()
     }
 }
 

@@ -1,7 +1,6 @@
 use std::hash::Hash;
 
 use derivative::Derivative;
-use rand::Rng;
 use tracing::info;
 
 use crate::ga::{GaContext, GeneticAlgorithmOptions};
@@ -33,14 +32,12 @@ where
     pub fn new(runner_options: GaRunnerOptions<Subject>) -> Self {
         Self { runner_options }
     }
-    pub fn run<'rng, RandNumGen, CreateSubjectFn, Mutator, Reproducer>(
+    pub fn run<CreateSubjectFn, Mutator, Reproducer>(
         &mut self,
-        rng: &'rng mut RandNumGen,
         ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
         population: Population<Subject>,
     ) where
-        RandNumGen: Rng,
-        CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
+        CreateSubjectFn: Fn(&GaContext) -> Subject,
         Mutator: ApplyMutation<Subject = Subject>,
         Reproducer: ApplyReproduction<Subject = Subject>,
     {
@@ -50,7 +47,7 @@ where
         }
         let mut ga_iter = GaIterator::new_with_options(
             ga_options,
-            GaIterState::new(GaContext::new(rng), population),
+            GaIterState::new(GaContext::default(), population),
             GaIterOptions {
                 debug_print: self.runner_options.debug_print,
             },
@@ -69,17 +66,14 @@ where
 }
 
 pub fn ga_runner<
-    'rng,
-    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
+    CreateSubjectFn: Fn(&GaContext) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 >(
     ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
     runner_options: GaRunnerOptions<Subject>,
     population: Population<Subject>,
-    rng: &'rng mut RandNumGen,
 ) {
-    GaRunner::new(runner_options).run(rng, ga_options, population);
+    GaRunner::new(runner_options).run(ga_options, population);
 }

@@ -4,7 +4,6 @@ use std::hash::Hash;
 
 use derivative::Derivative;
 use itertools::Itertools;
-use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use tracing::info;
@@ -30,16 +29,16 @@ impl<Subject> Default for GaIterOptions<Subject> {
     }
 }
 
-pub struct GaIterState<'rng, RandNumGen: Rng, Subject> {
-    pub(crate) context: GaContext<'rng, RandNumGen>,
+pub struct GaIterState<Subject> {
+    pub(crate) context: GaContext,
     pub(crate) generation: usize,
     pub(crate) current_fitness: Option<Fitness>,
     pub(crate) reverse_mode_enabled: Option<bool>,
     pub population: Population<Subject>,
 }
 
-impl<'rng, RandNumGen: Rng, Subject> GaIterState<'rng, RandNumGen, Subject> {
-    pub fn new(context: GaContext<'rng, RandNumGen>, population: Population<Subject>) -> Self {
+impl<Subject> GaIterState<Subject> {
+    pub fn new(context: GaContext, population: Population<Subject>) -> Self {
         Self {
             population,
             context,
@@ -79,7 +78,7 @@ impl<'rng, RandNumGen: Rng, Subject> GaIterState<'rng, RandNumGen, Subject> {
     }
 }
 
-impl<'rng, RandNumGen: Rng, Subject: Debug> Debug for GaIterState<'rng, RandNumGen, Subject> {
+impl<Subject: Debug> Debug for GaIterState<Subject> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaIterState")
             .field("generation", &self.generation)
@@ -90,28 +89,24 @@ impl<'rng, RandNumGen: Rng, Subject: Debug> Debug for GaIterState<'rng, RandNumG
     }
 }
 
-pub struct GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
-where
-    RandNumGen: Rng,
-{
+pub struct GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer> {
     options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-    state: GaIterState<'rng, RandNumGen, Subject>,
+    state: GaIterState<Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
 }
 
-impl<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
-    GaIterator<'rng, RandNumGen, Subject, CreateSubjectFn, Mutator, Reproducer>
+impl<Subject, CreateSubjectFn, Mutator, Reproducer>
+    GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer>
 where
-    RandNumGen: Rng,
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&mut GaContext<'rng, RandNumGen>) -> Subject,
+    CreateSubjectFn: Fn(&GaContext) -> Subject,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
     pub fn new(
         options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-        mut state: GaIterState<'rng, RandNumGen, Subject>,
+        mut state: GaIterState<Subject>,
     ) -> Self {
         Self {
             ga_iter_options: GaIterOptions::default(),
@@ -123,7 +118,7 @@ where
 
     pub fn new_with_options(
         options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
-        state: GaIterState<'rng, RandNumGen, Subject>,
+        state: GaIterState<Subject>,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
         let mut iter = Self::new(options, state);
@@ -131,7 +126,7 @@ where
         iter
     }
 
-    pub fn state(&self) -> &GaIterState<'rng, RandNumGen, Subject> {
+    pub fn state(&self) -> &GaIterState<Subject> {
         &self.state
     }
 
@@ -153,7 +148,6 @@ where
     }
 
     pub fn next_generation(&mut self) -> Option<Fitness> {
-        let rng = self.state.context.rng().clone();
         self.state.generation += 1;
         let generation_ix = self.state.generation;
         let target_fitness = self.options.target_fitness();
@@ -190,11 +184,10 @@ where
                 return None;
             }
         }
-        {
-            let mut rng = rng.lock().expect("failed to get lock on rng");
-            PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
-                .prune_random(&mut self.state.population.subjects, *rng);
-        }
+
+        PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
+            .prune_random(&mut self.state.population.subjects);
+
         apply_reproductions(
             &mut self.state.context,
             &mut self.state.population,
