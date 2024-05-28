@@ -130,6 +130,10 @@ where
         &self.state
     }
 
+    pub fn state_mut(&mut self) -> &mut GaIterState<Subject> {
+        &mut self.state
+    }
+
     pub fn is_fitness_at_target(&self) -> bool {
         Some(self.options.target_fitness()) == self.state.current_fitness
     }
