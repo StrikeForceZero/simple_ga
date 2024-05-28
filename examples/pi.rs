@@ -262,6 +262,7 @@ fn main() {
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
         log_on_mod_zero_for_generation_ix: 1000000,
+        run_on_mod_zero_for_generation_ix: None,
     };
 
     let population = create_population_pool(CreatePopulationOptions {

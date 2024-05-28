@@ -16,6 +16,7 @@ use crate::ga::subject::GaSubject;
 pub struct GaRunnerOptions<Subject> {
     #[derivative(Debug = "ignore")]
     pub debug_print: Option<fn(&Subject)>,
+    pub run_on_mod_zero_for_generation_ix: Option<fn(&GaContext, &Subject)>,
     pub log_on_mod_zero_for_generation_ix: usize,
 }
 
@@ -59,6 +60,11 @@ where
                 == 0
             {
                 info!("generation: {}", ga_iter.state().context.generation);
+                if let Some(fun) = self.runner_options.run_on_mod_zero_for_generation_ix {
+                    if let Some(subject) = ga_iter.state().population.subjects.first() {
+                        (&fun)(&ga_iter.state().context, &subject.subject());
+                    }
+                }
             }
             if ga_iter.next_generation().is_none() {
                 break;

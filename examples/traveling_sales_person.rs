@@ -270,6 +270,15 @@ fn main() {
         */
     }
 
+    fn check_if_best(ga_context: &GaContext, subject: &Route) {
+        let is_best_route = subject.is_best_possible_route();
+        debug!("is best route: {is_best_route}");
+        if is_best_route {
+            debug!("{subject}");
+            panic!("exiting");
+        }
+    }
+
     let ga_options = GeneticAlgorithmOptions {
         remove_duplicates: false,
         fitness_initial_to_target_range: INITIAL_FITNESS..TARGET_FITNESS,
@@ -293,6 +302,7 @@ fn main() {
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
         log_on_mod_zero_for_generation_ix: 100000,
+        run_on_mod_zero_for_generation_ix: Some(check_if_best),
     };
 
     let population = create_population_pool(CreatePopulationOptions {
