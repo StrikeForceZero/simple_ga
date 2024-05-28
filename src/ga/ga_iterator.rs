@@ -30,7 +30,6 @@ impl<Subject> Default for GaIterOptions<Subject> {
 
 pub struct GaIterState<Subject> {
     pub(crate) context: GaContext,
-    pub(crate) generation: usize,
     pub(crate) current_fitness: Option<Fitness>,
     pub(crate) reverse_mode_enabled: Option<bool>,
     pub population: Population<Subject>,
@@ -41,10 +40,12 @@ impl<Subject> GaIterState<Subject> {
         Self {
             population,
             context,
-            generation: 0,
             current_fitness: None,
             reverse_mode_enabled: None,
         }
+    }
+    pub fn context(&self) -> &GaContext {
+        &self.context
     }
     pub(crate) fn get_or_determine_reverse_mode_from_options<
         CreateSubjectFn,
@@ -80,7 +81,7 @@ impl<Subject> GaIterState<Subject> {
 impl<Subject: Debug> Debug for GaIterState<Subject> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaIterState")
-            .field("generation", &self.generation)
+            .field("context", &self.context)
             .field("current_fitness", &self.current_fitness)
             .field("reverse_mode_enabled", &self.reverse_mode_enabled)
             .field("population", &self.population)
@@ -147,8 +148,8 @@ where
     }
 
     pub fn next_generation(&mut self) -> Option<Fitness> {
-        self.state.generation += 1;
-        let generation_ix = self.state.generation;
+        self.state.context.generation += 1;
+        let generation_ix = self.state.context.generation;
         let target_fitness = self.options.target_fitness();
         let current_fitness = self.state.current_fitness;
         if self.is_reverse_mode {

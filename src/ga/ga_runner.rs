@@ -54,10 +54,11 @@ where
             },
         );
         while ga_iter.is_fitness_within_range() && !ga_iter.is_fitness_at_target() {
-            if ga_iter.state().generation % self.runner_options.log_on_mod_zero_for_generation_ix
+            if ga_iter.state().context.generation
+                % self.runner_options.log_on_mod_zero_for_generation_ix
                 == 0
             {
-                info!("generation: {}", ga_iter.state().generation);
+                info!("generation: {}", ga_iter.state().context.generation);
             }
             if ga_iter.next_generation().is_none() {
                 break;
