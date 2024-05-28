@@ -158,10 +158,11 @@ where
         }
         if let Some(wrapped_subject) = self.state.population.subjects.first() {
             let subject = wrapped_subject;
-            let fitness_will_update = self.is_reverse_mode
-                && subject.fitness() > self.state.current_fitness.unwrap_or(f64::MIN)
-                || !self.is_reverse_mode
-                    && subject.fitness() < self.state.current_fitness.unwrap_or(f64::MAX);
+            let fitness_will_update = if self.is_reverse_mode {
+                subject.fitness() > self.state.current_fitness.unwrap_or(f64::MIN)
+            } else {
+                subject.fitness() < self.state.current_fitness.unwrap_or(f64::MAX)
+            };
             if fitness_will_update {
                 self.state.current_fitness = Some(subject.fitness());
                 info!("generation: {generation_ix}, fitness: {current_fitness:?}/{target_fitness}");
