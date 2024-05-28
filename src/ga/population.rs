@@ -6,9 +6,9 @@ use std::hash::Hash;
 use itertools::Itertools;
 #[cfg(feature = "parallel")]
 use rayon::{
+    iter::Rev,
     prelude::*,
     slice::{Iter, IterMut},
-    vec::IntoIter,
 };
 
 use crate::ga::fitness::FitnessWrapped;
@@ -123,26 +123,16 @@ where
     pub fn iter(&self) -> Iter<FitnessWrapped<Subject>> {
         self.subjects.par_iter()
     }
-    pub fn iter_reverse(&self) -> IntoIter<&FitnessWrapped<Subject>> {
-        self.iter()
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect::<Vec<_>>()
-            .into_par_iter()
+    pub fn iter_reverse(&self) -> Rev<Iter<FitnessWrapped<Subject>>> {
+        self.iter().rev()
     }
 
     pub fn iter_mut(&mut self) -> IterMut<FitnessWrapped<Subject>> {
         self.subjects.par_iter_mut()
     }
 
-    pub fn iter_reverse_mut(&mut self) -> IntoIter<&mut FitnessWrapped<Subject>> {
-        self.iter_mut()
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect::<Vec<_>>()
-            .into_par_iter()
+    pub fn iter_reverse_mut(&mut self) -> Rev<IterMut<FitnessWrapped<Subject>>> {
+        self.iter_mut().rev()
     }
 }
 
