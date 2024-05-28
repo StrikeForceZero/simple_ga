@@ -30,3 +30,6 @@ name = "pi"
 
 [[example]]
 name = "sudoku"
+
+[[example]]
+name = "traveling_sales_person"
