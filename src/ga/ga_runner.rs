@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use derivative::Derivative;
 
-use crate::ga::{GaContext, GeneticAlgorithmOptions};
+use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
 use crate::ga::mutation::ApplyMutation;
@@ -42,14 +42,13 @@ where
     pub fn new(runner_options: GaRunnerOptions<Subject>) -> Self {
         Self { runner_options }
     }
-    pub fn run<CreateSubjectFn, Mutator, Reproducer>(
+    pub fn run<CreateSubjectFn, Actions>(
         &mut self,
-        ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+        ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
         population: Population<Subject>,
     ) where
         CreateSubjectFn: Fn(&GaContext) -> Subject,
-        Mutator: ApplyMutation<Subject = Subject>,
-        Reproducer: ApplyReproduction<Subject = Subject>,
+        Actions: GaAction<Subject = Subject>,
     {
         #[cfg(test)]
         {
@@ -87,10 +86,9 @@ where
 pub fn ga_runner<
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     CreateSubjectFn: Fn(&GaContext) -> Subject,
-    Mutator: ApplyMutation<Subject = Subject>,
-    Reproducer: ApplyReproduction<Subject = Subject>,
+    Actions: GaAction<Subject = Subject>,
 >(
-    ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+    ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
     runner_options: GaRunnerOptions<Subject>,
     population: Population<Subject>,
 ) {

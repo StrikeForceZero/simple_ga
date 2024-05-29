@@ -8,10 +8,11 @@ use tracing::{debug, info};
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
+use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
-use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
-use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
+use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
+use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
 
@@ -541,21 +542,23 @@ fn main() {
         fitness_range: target_fitness..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
         cull_amount: (population_size as f32 * 0.5).round() as usize,
-        mutation_options: ApplyMutationOptions {
-            clone_on_mutation: true,
-            multi_mutation: false,
-            overall_mutation_chance: 0.25,
-            mutation_actions: vec![
-                (MutatorFn::RandomFill, 0.10).into(),
-                (MutatorFn::RotateRow, 0.25).into(),
-                (MutatorFn::RandomOverwrite, 0.75).into(),
-            ],
-        },
-        reproduction_options: ApplyReproductionOptions {
-            reproduction_limit: (population_size as f32 * 0.25).round() as usize,
-            multi_reproduction: false,
-            overall_reproduction_chance: 0.25,
-            reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
+        actions: DefaultActions {
+            mutation: GenericMutator::new(ApplyMutationOptions {
+                clone_on_mutation: true,
+                multi_mutation: false,
+                overall_mutation_chance: 0.25,
+                mutation_actions: vec![
+                    (MutatorFn::RandomFill, 0.10).into(),
+                    (MutatorFn::RotateRow, 0.25).into(),
+                    (MutatorFn::RandomOverwrite, 0.75).into(),
+                ],
+            }),
+            reproduction: GenericReproducer::new(ApplyReproductionOptions {
+                reproduction_limit: (population_size as f32 * 0.25).round() as usize,
+                multi_reproduction: false,
+                overall_reproduction_chance: 0.25,
+                reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
+            }),
         },
     };
 

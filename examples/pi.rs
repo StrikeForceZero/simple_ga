@@ -7,11 +7,12 @@ use tracing::{debug, info};
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
+use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
-use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
+use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::reproduction::{
-    ApplyReproduction, ApplyReproductionOptions, asexual_reproduction,
+    ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
 };
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
@@ -231,31 +232,33 @@ fn main() {
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
         cull_amount: (population_size as f64 * 0.33).round() as usize,
-        mutation_options: ApplyMutationOptions {
-            clone_on_mutation: false,
-            multi_mutation: false,
-            overall_mutation_chance: 0.10,
-            mutation_actions: vec![
-                (MutatorFns::AddRandomPosOne, 0.75).into(),
-                (MutatorFns::SubRandomPosOne, 0.75).into(),
-                (MutatorFns::Truncate, 0.05).into(),
-                (MutatorFns::RandTruncate, 0.2).into(),
-                (MutatorFns::AddRandom, 0.75).into(),
-                (MutatorFns::SubRandom, 0.75).into(),
-                (MutatorFns::AddOne, 0.25).into(),
-                (MutatorFns::SubOne, 0.25).into(),
-            ],
-        },
-        reproduction_options: ApplyReproductionOptions {
-            reproduction_limit: population_size / 10,
-            multi_reproduction: false,
-            overall_reproduction_chance: 1.0,
-            reproduction_actions: vec![
-                (ReproductionFns::SexualHalf, 0.50).into(),
-                (ReproductionFns::SexualGenetic, 0.75).into(),
-                (ReproductionFns::ASexual, 0.10).into(),
-                (ReproductionFns::ZipDecimal, 0.60).into(),
-            ],
+        actions: DefaultActions {
+            mutation: GenericMutator::new(ApplyMutationOptions {
+                clone_on_mutation: false,
+                multi_mutation: false,
+                overall_mutation_chance: 0.10,
+                mutation_actions: vec![
+                    (MutatorFns::AddRandomPosOne, 0.75).into(),
+                    (MutatorFns::SubRandomPosOne, 0.75).into(),
+                    (MutatorFns::Truncate, 0.05).into(),
+                    (MutatorFns::RandTruncate, 0.2).into(),
+                    (MutatorFns::AddRandom, 0.75).into(),
+                    (MutatorFns::SubRandom, 0.75).into(),
+                    (MutatorFns::AddOne, 0.25).into(),
+                    (MutatorFns::SubOne, 0.25).into(),
+                ],
+            }),
+            reproduction: GenericReproducer::new(ApplyReproductionOptions {
+                reproduction_limit: population_size / 10,
+                multi_reproduction: false,
+                overall_reproduction_chance: 1.0,
+                reproduction_actions: vec![
+                    (ReproductionFns::SexualHalf, 0.50).into(),
+                    (ReproductionFns::SexualGenetic, 0.75).into(),
+                    (ReproductionFns::ASexual, 0.10).into(),
+                    (ReproductionFns::ZipDecimal, 0.60).into(),
+                ],
+            }),
         },
     };
 

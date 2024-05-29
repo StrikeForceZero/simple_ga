@@ -1,11 +1,28 @@
+use std::marker::PhantomData;
+
 use derivative::Derivative;
 use rand::distributions::{Distribution, WeightedIndex};
 
-use crate::ga::{GaContext, WeightedAction};
+use crate::ga::{GaAction, GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
+
+#[derive(Clone)]
+pub struct GenericMutator<Mutator, Subject> {
+    _subject: PhantomData<Subject>,
+    options: ApplyMutationOptions<Mutator>,
+}
+
+impl<Mutator, Subject> GenericMutator<Mutator, Subject> {
+    pub fn new(options: ApplyMutationOptions<Mutator>) -> Self {
+        Self {
+            _subject: PhantomData,
+            options,
+        }
+    }
+}
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
@@ -71,4 +88,15 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
         }
     }
     population.subjects.extend(appended_subjects);
+}
+
+impl<Mutator, Subject> GaAction for GenericMutator<Mutator, Subject>
+where
+    Mutator: ApplyMutation<Subject = Subject>,
+{
+    type Subject = Subject;
+
+    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+        apply_mutations(context, population, &self.options);
+    }
 }

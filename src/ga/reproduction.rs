@@ -1,17 +1,34 @@
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 use derivative::Derivative;
 use itertools::Itertools;
 use rand::distributions::{Distribution, WeightedIndex};
 
-use crate::ga::{GaContext, WeightedAction};
+use crate::ga::{GaAction, GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
+use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
 
 pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
     subject.clone()
+}
+
+#[derive(Clone)]
+pub struct GenericReproducer<Reproducer, Subject> {
+    _marker: PhantomData<Subject>,
+    options: ApplyReproductionOptions<Reproducer>,
+}
+
+impl<Reproducer, Subject> GenericReproducer<Reproducer, Subject> {
+    pub fn new(options: ApplyReproductionOptions<Reproducer>) -> Self {
+        Self {
+            _marker: PhantomData,
+            options,
+        }
+    }
 }
 
 #[derive(Derivative, Clone, Default)]
@@ -91,4 +108,15 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
         }
     }
     population.subjects.extend(appended_subjects);
+}
+
+impl<Reproducer, Subject> GaAction for GenericReproducer<Reproducer, Subject>
+where
+    Reproducer: ApplyReproduction<Subject = Subject>,
+{
+    type Subject = Subject;
+
+    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+        apply_reproductions(context, population, &self.options);
+    }
 }

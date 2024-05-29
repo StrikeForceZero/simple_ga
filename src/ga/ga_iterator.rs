@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use tracing::info;
 use tracing::log::{debug, warn};
 
-use crate::ga::{GaContext, GeneticAlgorithmOptions};
+use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
@@ -47,13 +47,9 @@ impl<Subject> GaIterState<Subject> {
     pub fn context(&self) -> &GaContext {
         &self.context
     }
-    pub(crate) fn get_or_determine_reverse_mode_from_options<
-        CreateSubjectFn,
-        Mutator,
-        Reproducer,
-    >(
+    pub(crate) fn get_or_determine_reverse_mode_from_options<CreateSubjectFn, Actions>(
         &self,
-        options: &GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+        options: &GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -61,9 +57,9 @@ impl<Subject> GaIterState<Subject> {
             options.initial_fitness() < options.target_fitness()
         }
     }
-    pub(crate) fn get_or_init_reverse_mode_enabled<CreateSubjectFn, Mutator, Reproducer>(
+    pub(crate) fn get_or_init_reverse_mode_enabled<CreateSubjectFn, Actions>(
         &mut self,
-        options: &GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+        options: &GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -89,23 +85,21 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer> {
-    options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+pub struct GaIterator<Subject, CreateSubjectFn, Actions> {
+    options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
     state: GaIterState<Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
 }
 
-impl<Subject, CreateSubjectFn, Mutator, Reproducer>
-    GaIterator<Subject, CreateSubjectFn, Mutator, Reproducer>
+impl<Subject, CreateSubjectFn, Actions> GaIterator<Subject, CreateSubjectFn, Actions>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     CreateSubjectFn: Fn(&GaContext) -> Subject,
-    Mutator: ApplyMutation<Subject = Subject>,
-    Reproducer: ApplyReproduction<Subject = Subject>,
+    Actions: GaAction<Subject = Subject>,
 {
     pub fn new(
-        options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+        options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
         mut state: GaIterState<Subject>,
     ) -> Self {
         Self {
@@ -117,7 +111,7 @@ where
     }
 
     pub fn new_with_options(
-        options: GeneticAlgorithmOptions<CreateSubjectFn, Mutator, Reproducer>,
+        options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
         state: GaIterState<Subject>,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
@@ -193,16 +187,9 @@ where
         PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
             .prune_random(&mut self.state.population.subjects);
 
-        apply_reproductions(
-            &mut self.state.context,
-            &mut self.state.population,
-            &self.options.reproduction_options,
-        );
-        apply_mutations(
-            &mut self.state.context,
-            &mut self.state.population,
-            &self.options.mutation_options,
-        );
+        self.options
+            .actions
+            .perform_action(&self.state.context, &mut self.state.population);
         if self.options.remove_duplicates {
             #[cfg(feature = "parallel")]
             let indexes_to_delete = {
