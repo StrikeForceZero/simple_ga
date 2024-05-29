@@ -1,50 +1,47 @@
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use rand::distributions::{Distribution, WeightedIndex};
 
-use crate::ga::{GaAction, GaContext, WeightedAction};
+use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
-use crate::util::{coin_flip, Odds, rng};
+use crate::util::{coin_flip, Odds};
 
 #[derive(Clone)]
-pub struct GenericMutator<Mutator, Subject> {
+pub struct GenericMutator<Mutator, Subject, Actions> {
     _subject: PhantomData<Subject>,
-    options: ApplyMutationOptions<Mutator>,
+    _mutator: PhantomData<Mutator>,
+    options: ApplyMutationOptions<Actions>,
 }
 
-impl<Mutator, Subject> GenericMutator<Mutator, Subject> {
-    pub fn new(options: ApplyMutationOptions<Mutator>) -> Self {
+impl<Mutator, Subject, Actions> GenericMutator<Mutator, Subject, Actions> {
+    pub fn new(options: ApplyMutationOptions<Actions>) -> Self {
         Self {
             _subject: PhantomData,
+            _mutator: PhantomData,
             options,
         }
     }
 }
 
-impl<Mutator, Subject> Default for GenericMutator<Mutator, Subject>
+impl<Mutator, Subject, Actions> Default for GenericMutator<Mutator, Subject, Actions>
 where
     Subject: Default,
     Mutator: Default,
+    Actions: Default,
 {
     fn default() -> Self {
-        Self::new(ApplyMutationOptions::default())
+        Self::new(ApplyMutationOptions::<Actions>::default())
     }
 }
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct ApplyMutationOptions<Mutator> {
+pub struct ApplyMutationOptions<Actions> {
     pub overall_mutation_chance: Odds,
-    /// - `true`: allows each mutation defined to be applied when `P(A∩B)`
-    ///     - A: `overall_mutation_chance`
-    ///     - B: `Odds` for a given `mutation_actions` entry
-    /// - `false`: random mutation is selected from `mutation_actions` based on its Weight (`Odds`)
-    pub multi_mutation: bool,
     #[derivative(Debug = "ignore")]
-    pub mutation_actions: Vec<WeightedAction<Mutator>>,
+    pub mutation_actions: Actions,
     pub clone_on_mutation: bool,
 }
 
@@ -54,18 +51,21 @@ pub trait ApplyMutation {
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_mutations<Mutator: ApplyMutation>(
+pub fn apply_mutations<
+    Subject,
+    Mutator: ApplyMutation<Subject = Subject>,
+    Actions: SampleSelf<Output = Vec<Mutator>>,
+>(
     context: &GaContext,
-    population: &mut Population<Mutator::Subject>,
-    options: &ApplyMutationOptions<Mutator>,
+    population: &mut Population<Subject>,
+    options: &ApplyMutationOptions<Actions>,
 ) {
-    let rng = &mut rng::thread_rng();
     let mut appended_subjects = vec![];
     for wrapped_subject in population.subjects.iter_mut() {
         if !coin_flip(options.overall_mutation_chance) {
             continue;
         }
-        let mut do_mutation = |context: &GaContext, mutator: &Mutator| {
+        for mutator in options.mutation_actions.sample_self().iter() {
             let subject = &wrapped_subject.subject();
             let mutated_subject = mutator.apply(context, subject);
             let fitness = Mutator::fitness(&mutated_subject);
@@ -75,34 +75,15 @@ pub fn apply_mutations<Mutator: ApplyMutation>(
             } else {
                 *wrapped_subject = fw;
             }
-        };
-        if options.multi_mutation {
-            for weighted_action in options.mutation_actions.iter() {
-                if !coin_flip(weighted_action.weight) {
-                    continue;
-                }
-                do_mutation(context, &weighted_action.action);
-            }
-        } else {
-            let weights: Vec<f64> = options
-                .mutation_actions
-                .iter()
-                .map(|weighted_action| weighted_action.weight)
-                .collect();
-            if weights.is_empty() {
-                continue;
-            }
-            let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
-            let index = dist.sample(rng);
-            do_mutation(context, &options.mutation_actions[index].action);
         }
     }
     population.subjects.extend(appended_subjects);
 }
 
-impl<Mutator, Subject> GaAction for GenericMutator<Mutator, Subject>
+impl<Mutator, Subject, MutatorActions> GaAction for GenericMutator<Mutator, Subject, MutatorActions>
 where
     Mutator: ApplyMutation<Subject = Subject>,
+    MutatorActions: SampleSelf<Output = Vec<Mutator>>,
 {
     type Subject = Subject;
 

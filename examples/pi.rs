@@ -6,6 +6,7 @@ use tracing::{debug, info};
 
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::EmptyDedupe;
@@ -241,15 +242,14 @@ fn main() {
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
-        actions: DefaultActions::<_, _, _, _, _, EmptyDedupe> {
+        actions: DefaultActions::<_, _, _, _, _, _, _, EmptyDedupe> {
             prune: PruneAction::new(PruneExtraBackSkipFirst::new(
                 population_size - (population_size as f64 * 0.33).round() as usize,
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: false,
-                multi_mutation: false,
                 overall_mutation_chance: 0.10,
-                mutation_actions: vec![
+                mutation_actions: WeightedActionsSampleOne(vec![
                     (MutatorFns::AddRandomPosOne, 0.75).into(),
                     (MutatorFns::SubRandomPosOne, 0.75).into(),
                     (MutatorFns::Truncate, 0.05).into(),
@@ -258,18 +258,17 @@ fn main() {
                     (MutatorFns::SubRandom, 0.75).into(),
                     (MutatorFns::AddOne, 0.25).into(),
                     (MutatorFns::SubOne, 0.25).into(),
-                ],
+                ]),
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
                 selector: SelectRandomManyWithBias::new(population_size / 10, Bias::Front),
-                multi_reproduction: false,
                 overall_reproduction_chance: 1.0,
-                reproduction_actions: vec![
+                reproduction_actions: WeightedActionsSampleOne(vec![
                     (ReproductionFns::SexualHalf, 0.50).into(),
                     (ReproductionFns::SexualGenetic, 0.75).into(),
                     (ReproductionFns::ASexual, 0.10).into(),
                     (ReproductionFns::ZipDecimal, 0.60).into(),
-                ],
+                ]),
             }),
             ..Default::default()
         },

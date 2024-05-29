@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::ga::{GaAction, GaContext};
+use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::dedupe::{DedupeAction, DedupeOther};
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::mutation::{ApplyMutation, GenericMutator};
@@ -21,21 +21,42 @@ impl<Subject> GaAction for EmptyAction<Subject> {
 }
 
 #[derive(Clone)]
-pub struct DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> {
+pub struct DefaultActions<
+    Subject,
+    Pruner,
+    MutatorActions,
+    Mutator,
+    Selector,
+    ReproducerActions,
+    Reproducer,
+    Dedupe,
+> {
     pub prune: PruneAction<Subject, Pruner>,
-    pub mutation: GenericMutator<Mutator, Subject>,
-    pub reproduction: GenericReproducer<Reproducer, Selector, Subject>,
+    pub mutation: GenericMutator<Mutator, Subject, MutatorActions>,
+    pub reproduction: GenericReproducer<Reproducer, Selector, Subject, ReproducerActions>,
     pub dedupe: DedupeAction<Subject, Dedupe>,
 }
 
-impl<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> GaAction
-    for DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe>
+impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Reproducer, Dedupe>
+    GaAction
+    for DefaultActions<
+        Subject,
+        Pruner,
+        MutatorActions,
+        Mutator,
+        Selector,
+        ReproducerActions,
+        Reproducer,
+        Dedupe,
+    >
 where
     Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
     Mutator: ApplyMutation<Subject = Subject>,
+    MutatorActions: SampleSelf<Output = Vec<Mutator>>,
     Selector:
         for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
     Reproducer: ApplyReproduction<Subject = Subject>,
+    ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
     Dedupe: DedupeOther<Population<Subject>>,
 {
     type Subject = Subject;
@@ -48,21 +69,34 @@ where
     }
 }
 
-impl<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> Default
-    for DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe>
+impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Reproducer, Dedupe>
+    Default
+    for DefaultActions<
+        Subject,
+        Pruner,
+        MutatorActions,
+        Mutator,
+        Selector,
+        ReproducerActions,
+        Reproducer,
+        Dedupe,
+    >
 where
     Subject: Default,
     Pruner: Default,
+    MutatorActions: Default,
     Mutator: Default,
     Selector: Default,
+    ReproducerActions: Default,
     Reproducer: Default,
     Dedupe: Default,
 {
     fn default() -> Self {
         Self {
             prune: PruneAction::<Subject, Pruner>::default(),
-            mutation: GenericMutator::<Mutator, Subject>::default(),
-            reproduction: GenericReproducer::<Reproducer, Selector, Subject>::default(),
+            mutation: GenericMutator::<Mutator, Subject, MutatorActions>::default(),
+            reproduction:
+                GenericReproducer::<Reproducer, Selector, Subject, ReproducerActions>::default(),
             dedupe: DedupeAction::<Subject, Dedupe>::default(),
         }
     }

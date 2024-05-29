@@ -9,6 +9,7 @@ use tracing::{debug, info, warn};
 
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
@@ -164,6 +165,7 @@ fn generate_cities(num_cities: usize, width: f64, height: f64) -> Vec<City> {
         .collect()
 }
 
+#[derive(Debug, Copy, Clone)]
 enum Mutation {
     Swap,
 }
@@ -193,6 +195,7 @@ impl ApplyMutation for Mutation {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 enum Reproduction {
     Reproduce,
 }
@@ -315,15 +318,17 @@ fn main() {
             prune: PruneAction::new(DefaultPruneHalfBackSkipFirst),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: true,
-                multi_mutation: false,
                 overall_mutation_chance: 0.75,
-                mutation_actions: vec![(Mutation::Swap, 0.5).into()],
+                mutation_actions: WeightedActionsSampleOne(vec![(Mutation::Swap, 0.5).into()]),
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
                 selector: SelectRandomManyWithBias::new(population_size / 4, Bias::Front),
-                multi_reproduction: false,
                 overall_reproduction_chance: 0.25,
-                reproduction_actions: vec![(Reproduction::Reproduce, 0.50).into()],
+                reproduction_actions: WeightedActionsSampleOne(vec![(
+                    Reproduction::Reproduce,
+                    0.50,
+                )
+                    .into()]),
             }),
             dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
         },

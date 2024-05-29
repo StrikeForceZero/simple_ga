@@ -7,6 +7,7 @@ use tracing::{debug, info};
 
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
@@ -377,6 +378,7 @@ impl Fit<Fitness> for WrappedBoard {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 enum MutatorFn {
     RotateRow,
     RandomFill,
@@ -451,6 +453,7 @@ impl ApplyMutation for MutatorFn {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 enum ReproductionFn {
     RandomMix,
 }
@@ -549,19 +552,21 @@ fn main() {
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: true,
-                multi_mutation: false,
                 overall_mutation_chance: 0.25,
-                mutation_actions: vec![
+                mutation_actions: WeightedActionsSampleOne(vec![
                     (MutatorFn::RandomFill, 0.10).into(),
                     (MutatorFn::RotateRow, 0.25).into(),
                     (MutatorFn::RandomOverwrite, 0.75).into(),
-                ],
+                ]),
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
                 selector: SelectRandomManyWithBias::new(population_size / 4, Bias::Front),
-                multi_reproduction: false,
                 overall_reproduction_chance: 0.25,
-                reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
+                reproduction_actions: WeightedActionsSampleOne(vec![(
+                    ReproductionFn::RandomMix,
+                    0.50,
+                )
+                    .into()]),
             }),
             dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
         },
