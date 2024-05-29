@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::dedupe::{DedupeAction, DedupeOther};
 use crate::ga::fitness::FitnessWrapped;
+use crate::ga::inflate::InflateTarget;
 use crate::ga::mutation::{ApplyMutation, GenericMutator};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneAction, PruneOther};
@@ -30,15 +31,26 @@ pub struct DefaultActions<
     ReproducerActions,
     Reproducer,
     Dedupe,
+    Inflator,
 > {
     pub prune: PruneAction<Subject, Pruner>,
     pub mutation: GenericMutator<Mutator, Subject, MutatorActions>,
     pub reproduction: GenericReproducer<Reproducer, Selector, Subject, ReproducerActions>,
     pub dedupe: DedupeAction<Subject, Dedupe>,
+    pub inflate: Inflator,
 }
 
-impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Reproducer, Dedupe>
-    GaAction
+impl<
+        Subject,
+        Pruner,
+        MutatorActions,
+        Mutator,
+        Selector,
+        ReproducerActions,
+        Reproducer,
+        Dedupe,
+        Inflator,
+    > GaAction
     for DefaultActions<
         Subject,
         Pruner,
@@ -48,6 +60,7 @@ impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Repr
         ReproducerActions,
         Reproducer,
         Dedupe,
+        Inflator,
     >
 where
     Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
@@ -58,6 +71,8 @@ where
     Reproducer: ApplyReproduction<Subject = Subject>,
     ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
     Dedupe: DedupeOther<Population<Subject>>,
+    Inflator: InflateTarget<Params = GaContext, Target = Population<Subject>>
+        + GaAction<Subject = Subject>,
 {
     type Subject = Subject;
 
@@ -66,11 +81,21 @@ where
         self.mutation.perform_action(context, population);
         self.reproduction.perform_action(context, population);
         self.dedupe.perform_action(context, population);
+        self.inflate.perform_action(context, population);
     }
 }
 
-impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Reproducer, Dedupe>
-    Default
+impl<
+        Subject,
+        Pruner,
+        MutatorActions,
+        Mutator,
+        Selector,
+        ReproducerActions,
+        Reproducer,
+        Dedupe,
+        Inflator,
+    > Default
     for DefaultActions<
         Subject,
         Pruner,
@@ -80,6 +105,7 @@ impl<Subject, Pruner, MutatorActions, Mutator, Selector, ReproducerActions, Repr
         ReproducerActions,
         Reproducer,
         Dedupe,
+        Inflator,
     >
 where
     Subject: Default,
@@ -90,6 +116,7 @@ where
     ReproducerActions: Default,
     Reproducer: Default,
     Dedupe: Default,
+    Inflator: Default,
 {
     fn default() -> Self {
         Self {
@@ -98,6 +125,7 @@ where
             reproduction:
                 GenericReproducer::<Reproducer, Selector, Subject, ReproducerActions>::default(),
             dedupe: DedupeAction::<Subject, Dedupe>::default(),
+            inflate: Inflator::default(),
         }
     }
 }

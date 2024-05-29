@@ -42,12 +42,11 @@ where
     pub fn new(runner_options: GaRunnerOptions<Subject>) -> Self {
         Self { runner_options }
     }
-    pub fn run<CreateSubjectFn, Actions>(
+    pub fn run<Actions>(
         &mut self,
-        ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+        ga_options: GeneticAlgorithmOptions<Actions>,
         population: Population<Subject>,
     ) where
-        CreateSubjectFn: Fn(&GaContext) -> Subject,
         Actions: GaAction<Subject = Subject>,
     {
         #[cfg(test)]
@@ -85,10 +84,9 @@ where
 
 pub fn ga_runner<
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&GaContext) -> Subject,
     Actions: GaAction<Subject = Subject>,
 >(
-    ga_options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+    ga_options: GeneticAlgorithmOptions<Actions>,
     runner_options: GaRunnerOptions<Subject>,
     population: Population<Subject>,
 ) {

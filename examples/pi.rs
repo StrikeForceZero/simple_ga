@@ -9,9 +9,10 @@ use simple_ga::ga::{
     WeightedActionsSampleOne,
 };
 use simple_ga::ga::action::DefaultActions;
-use simple_ga::ga::dedupe::EmptyDedupe;
+use simple_ga::ga::dedupe::{DedupeAction, EmptyDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
+use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
@@ -241,8 +242,7 @@ fn main() {
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
-        create_subject_fn: create_subject_fn.clone(),
-        actions: DefaultActions::<_, _, _, _, _, _, _, EmptyDedupe> {
+        actions: DefaultActions {
             prune: PruneAction::new(PruneExtraBackSkipFirst::new(
                 population_size - (population_size as f64 * 0.33).round() as usize,
             )),
@@ -270,7 +270,10 @@ fn main() {
                     (ReproductionFns::ZipDecimal, 0.60).into(),
                 ]),
             }),
-            ..Default::default()
+            dedupe: DedupeAction::new(EmptyDedupe),
+            inflate: InflateUntilFull(create_subject_fn.clone()),
+            // TODO: fix default
+            // ..Default::default()
         },
     };
 
@@ -290,7 +293,7 @@ fn main() {
 
     let population = create_population_pool(CreatePopulationOptions {
         population_size,
-        create_subject_fn: create_subject_fn.clone(),
+        create_subject_fn,
     });
 
     info!("starting generation loop");

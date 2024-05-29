@@ -15,6 +15,7 @@ pub mod dedupe;
 pub mod fitness;
 pub mod ga_iterator;
 pub mod ga_runner;
+pub mod inflate;
 pub mod mutation;
 pub mod population;
 pub mod probability;
@@ -135,16 +136,15 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<CreateSubjectFn, Actions> {
+pub struct GeneticAlgorithmOptions<Actions> {
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
-    pub create_subject_fn: CreateSubjectFn,
     pub actions: Actions,
 }
 
-impl<CreateSubjectFn, Actions> GeneticAlgorithmOptions<CreateSubjectFn, Actions> {
+impl<Actions> GeneticAlgorithmOptions<Actions> {
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
     }

@@ -47,9 +47,9 @@ impl<Subject> GaIterState<Subject> {
     pub fn context(&self) -> &GaContext {
         &self.context
     }
-    pub(crate) fn get_or_determine_reverse_mode_from_options<CreateSubjectFn, Actions>(
+    pub(crate) fn get_or_determine_reverse_mode_from_options<Actions>(
         &self,
-        options: &GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+        options: &GeneticAlgorithmOptions<Actions>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -57,9 +57,9 @@ impl<Subject> GaIterState<Subject> {
             options.initial_fitness() < options.target_fitness()
         }
     }
-    pub(crate) fn get_or_init_reverse_mode_enabled<CreateSubjectFn, Actions>(
+    pub(crate) fn get_or_init_reverse_mode_enabled<Actions>(
         &mut self,
-        options: &GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+        options: &GeneticAlgorithmOptions<Actions>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -85,23 +85,19 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<Subject, CreateSubjectFn, Actions> {
-    options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+pub struct GaIterator<Subject, Actions> {
+    options: GeneticAlgorithmOptions<Actions>,
     state: GaIterState<Subject>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
 }
 
-impl<Subject, CreateSubjectFn, Actions> GaIterator<Subject, CreateSubjectFn, Actions>
+impl<Subject, Actions> GaIterator<Subject, Actions>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
-    CreateSubjectFn: Fn(&GaContext) -> Subject,
     Actions: GaAction<Subject = Subject>,
 {
-    pub fn new(
-        options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
-        mut state: GaIterState<Subject>,
-    ) -> Self {
+    pub fn new(options: GeneticAlgorithmOptions<Actions>, mut state: GaIterState<Subject>) -> Self {
         Self {
             ga_iter_options: GaIterOptions::default(),
             is_reverse_mode: state.get_or_init_reverse_mode_enabled(&options),
@@ -111,7 +107,7 @@ where
     }
 
     pub fn new_with_options(
-        options: GeneticAlgorithmOptions<CreateSubjectFn, Actions>,
+        options: GeneticAlgorithmOptions<Actions>,
         state: GaIterState<Subject>,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
@@ -187,14 +183,6 @@ where
         self.options
             .actions
             .perform_action(&self.state.context, &mut self.state.population);
-        while self.state.population.subjects.len() < self.state.population.pool_size {
-            let new_subject = (&self.options.create_subject_fn)(&mut self.state.context);
-            let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
-            if fitness_wrapped.fitness() == self.options.target_fitness() {
-                warn!("created a subject that measures at the target fitness {} in generation {generation_ix}", self.options.target_fitness());
-            }
-            self.state.population.subjects.push(fitness_wrapped);
-        }
         self.state.current_fitness
     }
 }
