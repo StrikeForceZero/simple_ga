@@ -95,6 +95,9 @@ impl Route {
         1.0 / self.total_distance()
     }
     fn is_best_possible_route(&self) -> bool {
+        self.is_best_possible_route_full().0
+    }
+    fn is_best_possible_route_full(&self) -> (bool, Option<Route>) {
         let num_cities = self.cities.len();
         let given_route_distance = self.total_distance();
 
@@ -115,11 +118,11 @@ impl Route {
                     "shorter: {current_route} - {}",
                     current_route.total_distance()
                 );
-                return false; // Found a shorter route
+                return (false, Some(current_route)); // Found a shorter route
             }
             ix += 1;
         }
-        true // Given route is the shortest
+        (true, None) // Given route is the shortest
     }
     fn shortest(&self) -> Route {
         let num_cities = self.cities.len();
@@ -256,15 +259,6 @@ fn main() {
             .choose_multiple(&mut simple_ga::util::rng::thread_rng(), CITIES.len())
             .collect()
     };
-    /*lazy_static! {
-        static ref BEST_ROUTE: Route = Route {
-            cities: CITIES
-                .choose_multiple(&mut simple_ga::util::rng::thread_rng(), CITIES.len())
-                .collect(),
-        }
-        .shortest();
-        static ref BEST_ROUTE_DISTANCE: f64 = BEST_ROUTE.total_distance();
-    }*/
 
     for city in CITIES.iter() {
         println!("{city:?}");
@@ -278,13 +272,6 @@ fn main() {
         let fitness = subject.measure();
         let total_distance = subject.total_distance();
         debug!("best: (fit: {fitness}, dist: {total_distance}):\n{subject}");
-        /*
-        let is_best_route = total_distance <= *BEST_ROUTE_DISTANCE;
-        debug!("is best route: {is_best_route}");
-        if !is_best_route {
-            debug!("best: {} {}", *BEST_ROUTE, *BEST_ROUTE_DISTANCE);
-        }
-        */
     }
 
     fn check_if_best(
@@ -301,13 +288,17 @@ fn main() {
             return None;
         };
         debug!("checking if best subject is the best possible route...");
-        let is_best_route = best_subject.subject().is_best_possible_route();
+        let (is_best_route, better_route_opt) =
+            best_subject.subject().is_best_possible_route_full();
         debug!("is best route: {is_best_route}");
         if is_best_route {
             debug!("{best_subject}");
             return Some(GaRunnerCustomForEachGenerationResult::Terminate);
         } else {
-            // TODO: put found shortest in population
+            if let Some(better_route) = better_route_opt {
+                // this is basically cheating but it's a good example of manipulating the runner
+                iter_state.population.add(better_route.into());
+            }
         }
         None
     }
