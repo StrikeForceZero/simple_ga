@@ -12,8 +12,9 @@ use simple_ga::ga::{
 };
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
-use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
+use simple_ga::ga::population::Population;
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
@@ -71,7 +72,7 @@ impl Display for Route {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
 struct Route {
     cities: Vec<&'static City>,
 }
@@ -286,14 +287,29 @@ fn main() {
         */
     }
 
-    fn check_if_best(_ga_context: &GaContext, subject: &Route) {
+    fn check_if_best(
+        iter_state: &mut GaIterState<Route>,
+    ) -> Option<GaRunnerCustomForEachGenerationResult> {
+        if iter_state.context().generation == 0 {
+            return None;
+        }
+        if iter_state.context().generation % 100000 != 0 {
+            return None;
+        }
+        info!("generation: {}", iter_state.context().generation);
+        let Some(best_subject) = iter_state.population.subjects.first() else {
+            return None;
+        };
         debug!("checking if best subject is the best possible route...");
-        let is_best_route = subject.is_best_possible_route();
+        let is_best_route = best_subject.subject().is_best_possible_route();
         debug!("is best route: {is_best_route}");
         if is_best_route {
-            debug!("{subject}");
-            panic!("exiting");
+            debug!("{best_subject}");
+            return Some(GaRunnerCustomForEachGenerationResult::Terminate);
+        } else {
+            // TODO: put found shortest in population
         }
+        None
     }
 
     let ga_options = GeneticAlgorithmOptions {
@@ -318,8 +334,8 @@ fn main() {
 
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
-        log_on_mod_zero_for_generation_ix: 100000,
-        run_on_mod_zero_for_generation_ix: Some(check_if_best),
+        before_each_generation: Some(check_if_best),
+        ..Default::default()
     };
 
     let population = create_population_pool(CreatePopulationOptions {

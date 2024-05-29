@@ -9,7 +9,7 @@ use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
 use simple_ga::ga::subject::GaSubject;
@@ -561,8 +561,16 @@ fn main() {
 
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
-        log_on_mod_zero_for_generation_ix: 1000000,
-        run_on_mod_zero_for_generation_ix: None,
+        before_each_generation: Some(|ga_iter_state| {
+            if ga_iter_state.context().generation == 0 {
+                return None;
+            }
+            if ga_iter_state.context().generation % 1000000 == 0 {
+                debug!("generation: {}", ga_iter_state.context().generation);
+            }
+            None
+        }),
+        ..Default::default()
     };
 
     let population = create_population_pool(CreatePopulationOptions {

@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use lazy_static::lazy_static;
 use rand::Rng;
-use tracing::info;
+use tracing::{debug, info};
 
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
@@ -261,8 +261,16 @@ fn main() {
 
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
-        log_on_mod_zero_for_generation_ix: 1000000,
-        run_on_mod_zero_for_generation_ix: None,
+        before_each_generation: Some(|ga_iter_state| {
+            if ga_iter_state.context().generation == 0 {
+                return None;
+            }
+            if ga_iter_state.context().generation % 1000000 == 0 {
+                debug!("generation: {}", ga_iter_state.context().generation);
+            }
+            None
+        }),
+        ..Default::default()
     };
 
     let population = create_population_pool(CreatePopulationOptions {
