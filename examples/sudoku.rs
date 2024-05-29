@@ -19,7 +19,7 @@ use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::{Bias, rng};
+use simple_ga::util::{ApplyRatioFloat64, Bias, rng};
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 struct SudokuValidationGroup {
@@ -548,7 +548,7 @@ fn main() {
         fitness_range: target_fitness..MAX_FITNESS,
         actions: DefaultActions {
             prune: PruneAction::new(PruneExtraBackSkipFirst::new(
-                population_size - (population_size as f64 * 0.5).round() as usize,
+                population_size.apply_ratio_round(0.5),
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: true,

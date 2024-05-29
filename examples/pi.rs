@@ -20,7 +20,7 @@ use simple_ga::ga::reproduction::{
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::{Bias, rng};
+use simple_ga::util::{ApplyRatioFloat64, Bias, rng};
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();
@@ -244,7 +244,7 @@ fn main() {
         fitness_range: 0f64..target_fitness,
         actions: DefaultActions {
             prune: PruneAction::new(PruneExtraBackSkipFirst::new(
-                population_size - (population_size as f64 * 0.33).round() as usize,
+                population_size.apply_ratio_round(0.33),
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: false,

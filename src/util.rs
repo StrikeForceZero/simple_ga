@@ -1,5 +1,27 @@
 use rand::Rng;
 
+pub trait ApplyRatioFloat64 {
+    fn apply_ratio(&self, ratio: f64) -> f64;
+    fn apply_ratio_ceil(&self, ratio: f64) -> Self;
+    fn apply_ratio_floor(&self, ratio: f64) -> Self;
+    fn apply_ratio_round(&self, ratio: f64) -> Self;
+}
+
+impl ApplyRatioFloat64 for usize {
+    fn apply_ratio(&self, ratio: f64) -> f64 {
+        *self as f64 * ratio
+    }
+    fn apply_ratio_ceil(&self, ratio: f64) -> Self {
+        self.apply_ratio(ratio).ceil() as usize
+    }
+    fn apply_ratio_floor(&self, ratio: f64) -> Self {
+        self.apply_ratio(ratio).floor() as usize
+    }
+    fn apply_ratio_round(&self, ratio: f64) -> Self {
+        self.apply_ratio(ratio).round() as usize
+    }
+}
+
 /// Type alias for all probability / random usages
 pub type Odds = f64;
 
@@ -99,5 +121,51 @@ mod tests {
             / SAMPLE_SIZE as f32;
         println!("{bias:?} {avg}");
         assert!(expected(avg));
+    }
+
+    mod apply_ratio_float64_tests {
+        use super::*;
+
+        #[rstest(
+            input,
+            ratio,
+            expected,
+            case(1, 1.0, 1),
+            case(1, 0.0, 0),
+            case(1, 0.5, 1),
+            case(1, 0.1, 1),
+            case(1, 0.9, 1)
+        )]
+        fn test_ceil(input: usize, ratio: f64, expected: usize) {
+            assert_eq!(input.apply_ratio_ceil(ratio), expected);
+        }
+
+        #[rstest(
+            input,
+            ratio,
+            expected,
+            case(1, 1.0, 1),
+            case(1, 0.0, 0),
+            case(1, 0.5, 0),
+            case(1, 0.1, 0),
+            case(1, 0.9, 0)
+        )]
+        fn test_floor(input: usize, ratio: f64, expected: usize) {
+            assert_eq!(input.apply_ratio_floor(ratio), expected);
+        }
+
+        #[rstest(
+            input,
+            ratio,
+            expected,
+            case(1, 1.0, 1),
+            case(1, 0.0, 0),
+            case(1, 0.5, 1),
+            case(1, 0.1, 0),
+            case(1, 0.9, 1)
+        )]
+        fn test_round(input: usize, ratio: f64, expected: usize) {
+            assert_eq!(input.apply_ratio_round(ratio), expected);
+        }
     }
 }
