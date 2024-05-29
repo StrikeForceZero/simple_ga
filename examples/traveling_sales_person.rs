@@ -19,7 +19,7 @@ use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutato
 use simple_ga::ga::population::Population;
 use simple_ga::ga::prune::{DefaultPruneHalfBackSkipFirst, PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
-use simple_ga::ga::select::{GenericSelector, SelectRandomManyWithBias};
+use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::{Bias, rng};
 
@@ -320,10 +320,7 @@ fn main() {
                 mutation_actions: vec![(Mutation::Swap, 0.5).into()],
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
-                selector: GenericSelector(SelectRandomManyWithBias::new(
-                    population_size / 4,
-                    Bias::Front,
-                )),
+                selector: SelectRandomManyWithBias::new(population_size / 4, Bias::Front),
                 multi_reproduction: false,
                 overall_reproduction_chance: 0.25,
                 reproduction_actions: vec![(Reproduction::Reproduce, 0.50).into()],

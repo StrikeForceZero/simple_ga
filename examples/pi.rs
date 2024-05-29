@@ -16,7 +16,7 @@ use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
 };
-use simple_ga::ga::select::{GenericSelector, SelectRandomManyWithBias};
+use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::{Bias, rng};
 
@@ -261,10 +261,7 @@ fn main() {
                 ],
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
-                selector: GenericSelector(SelectRandomManyWithBias::new(
-                    population_size / 10,
-                    Bias::Front,
-                )),
+                selector: SelectRandomManyWithBias::new(population_size / 10, Bias::Front),
                 multi_reproduction: false,
                 overall_reproduction_chance: 1.0,
                 reproduction_actions: vec![

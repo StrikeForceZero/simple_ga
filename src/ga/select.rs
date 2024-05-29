@@ -16,32 +16,6 @@ pub trait SelectOther<T>: Copy {
     ) -> Self::Output;
 }
 
-#[derive(Debug, Copy, Clone, Default)]
-pub struct GenericSelector<S>(pub S);
-
-impl<S> GenericSelector<S> {
-    pub fn new(selector: S) -> Self {
-        Self(selector)
-    }
-}
-
-impl<T, S> SelectOther<T> for GenericSelector<S>
-where
-    S: SelectOther<T, Output = Vec<T>>,
-{
-    type Output = Vec<T>;
-
-    fn select_from<
-        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
-        Iter2: Iterator<Item = T> + ExactSizeIterator,
-    >(
-        self,
-        items: Iter,
-    ) -> Self::Output {
-        self.0.select_from(items)
-    }
-}
-
 pub trait SelectOtherRandom<T> {
     type Output;
     fn select_random<
@@ -51,6 +25,23 @@ pub trait SelectOtherRandom<T> {
         self,
         items: Iter,
     ) -> Self::Output;
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub struct SelectAll;
+
+impl<T> SelectOther<T> for SelectAll {
+    type Output = Vec<T>;
+
+    fn select_from<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        items: Iter,
+    ) -> Self::Output {
+        items.into_iter().collect()
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]

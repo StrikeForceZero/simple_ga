@@ -15,7 +15,7 @@ use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult,
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
-use simple_ga::ga::select::{GenericSelector, SelectRandomManyWithBias};
+use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::{Bias, rng};
 
@@ -558,10 +558,7 @@ fn main() {
                 ],
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
-                selector: GenericSelector(SelectRandomManyWithBias::new(
-                    population_size / 4,
-                    Bias::Front,
-                )),
+                selector: SelectRandomManyWithBias::new(population_size / 4, Bias::Front),
                 multi_reproduction: false,
                 overall_reproduction_chance: 0.25,
                 reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],

@@ -9,7 +9,7 @@ use crate::ga::{GaAction, GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
-use crate::ga::select::{GenericSelector, SelectOther};
+use crate::ga::select::SelectOther;
 use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
 
@@ -46,7 +46,7 @@ where
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer, Selector> {
-    pub selector: GenericSelector<Selector>,
+    pub selector: Selector,
     pub overall_reproduction_chance: Odds,
     /// - `true`: allows each reproduction defined to be applied when `P(A∩B)`
     ///     - A: `overall_reproduction_chance`
