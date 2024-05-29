@@ -17,6 +17,7 @@ use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutato
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
+    ReproductionResult,
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
@@ -146,7 +147,7 @@ impl ApplyReproduction for ReproductionFns {
         _context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
-    ) -> (Self::Subject, Self::Subject) {
+    ) -> Option<ReproductionResult<Self::Subject>> {
         let a = subject_a.as_f64();
         let b = subject_b.as_f64();
 
@@ -186,11 +187,11 @@ impl ApplyReproduction for ReproductionFns {
                 let b_string = b.to_string();
                 let Some((a_left, a_right)) = a_string.split_once('.') else {
                     // no decimal
-                    return (a.into(), b.into());
+                    return Some(ReproductionResult::Double(a.into(), b.into()));
                 };
                 let Some((b_left, b_right)) = b_string.split_once('.') else {
                     // no decimal
-                    return (a.into(), b.into());
+                    return Some(ReproductionResult::Double(a.into(), b.into()));
                 };
                 let max_len = a_right.len().max(b_right.len());
                 // match right length
@@ -213,7 +214,7 @@ impl ApplyReproduction for ReproductionFns {
                 (Subject(a).as_f64(), Subject(b).as_f64())
             }
         };
-        (a.into(), b.into())
+        Some(ReproductionResult::Double(a.into(), b.into()))
     }
 
     fn fitness(subject: &Self::Subject) -> Fitness {

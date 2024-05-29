@@ -20,7 +20,9 @@ use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::population::Population;
 use simple_ga::ga::prune::{DefaultPruneHalfBackSkipFirst, PruneAction, PruneExtraBackSkipFirst};
-use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
+use simple_ga::ga::reproduction::{
+    ApplyReproduction, ApplyReproductionOptions, GenericReproducer, ReproductionResult,
+};
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::{Bias, rng};
@@ -209,7 +211,7 @@ impl ApplyReproduction for Reproduction {
         _context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
-    ) -> (Self::Subject, Self::Subject) {
+    ) -> Option<ReproductionResult<Self::Subject>> {
         let mut rng = &mut simple_ga::util::rng::thread_rng();
         match self {
             Reproduction::Reproduce => {
@@ -239,7 +241,7 @@ impl ApplyReproduction for Reproduction {
                 let route = Route {
                     cities: child_cities.into_iter().filter_map(|c| c).collect(),
                 };
-                (route.clone(), route)
+                Some(ReproductionResult::Single(route))
             }
         }
     }

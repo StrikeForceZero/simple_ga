@@ -16,7 +16,9 @@ use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult,
 use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
-use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
+use simple_ga::ga::reproduction::{
+    ApplyReproduction, ApplyReproductionOptions, GenericReproducer, ReproductionResult,
+};
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::{ApplyRatioFloat64, Bias, rng};
@@ -467,7 +469,7 @@ impl ApplyReproduction for ReproductionFn {
         context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
-    ) -> (Self::Subject, Self::Subject) {
+    ) -> Option<ReproductionResult<Self::Subject>> {
         let rng = &mut rng::thread_rng();
         let subject_a = &subject_a.board;
         let subject_b = &subject_b.board;
@@ -492,10 +494,10 @@ impl ApplyReproduction for ReproductionFn {
                     new_a[row_ix] = a;
                     new_b[row_ix] = b;
                 }
-                (
+                Some(ReproductionResult::Double(
                     WrappedBoard::create_reproduction(Board(new_a), context.generation),
                     WrappedBoard::create_reproduction(Board(new_b), context.generation),
-                )
+                ))
             }
         }
     }

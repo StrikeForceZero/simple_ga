@@ -57,6 +57,14 @@ pub struct ApplyReproductionOptions<Actions, Selector> {
     pub reproduction_actions: Actions,
 }
 
+#[derive(Debug, Clone)]
+pub enum ReproductionResult<T> {
+    Single(T),
+    Double(T, T),
+    Triple(T, T, T),
+    Quad(T, T, T, T),
+}
+
 pub trait ApplyReproduction {
     type Subject: GaSubject + Hash + PartialEq + Eq;
     fn apply(
@@ -64,7 +72,7 @@ pub trait ApplyReproduction {
         context: &GaContext,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
-    ) -> (Self::Subject, Self::Subject);
+    ) -> Option<ReproductionResult<Self::Subject>>;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
@@ -91,14 +99,16 @@ pub fn apply_reproductions<
         let (subject_a, subject_b) = (&subject_a.subject(), &subject_b.subject());
 
         for reproducer in options.reproduction_actions.sample_self().iter() {
-            let (offspring_a, offspring_b) = reproducer.apply(context, subject_a, subject_b);
-            {
-                let fitness = Reproducer::fitness(&offspring_a);
-                appended_subjects.push(FitnessWrapped::new(offspring_a, fitness));
-            }
-            {
-                let fitness = Reproducer::fitness(&offspring_b);
-                appended_subjects.push(FitnessWrapped::new(offspring_b, fitness));
+            let offspring = match reproducer.apply(context, subject_a, subject_b) {
+                None => vec![],
+                Some(ReproductionResult::Single(a)) => vec![a],
+                Some(ReproductionResult::Double(a, b)) => vec![a, b],
+                Some(ReproductionResult::Triple(a, b, c)) => vec![a, b, c],
+                Some(ReproductionResult::Quad(a, b, c, d)) => vec![a, b, c, d],
+            };
+            for offspring in offspring {
+                let fitness = Reproducer::fitness(&offspring);
+                appended_subjects.push(FitnessWrapped::new(offspring, fitness));
             }
         }
     }
