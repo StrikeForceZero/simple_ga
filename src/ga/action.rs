@@ -7,6 +7,7 @@ use crate::ga::mutation::{ApplyMutation, GenericMutator};
 use crate::ga::population::Population;
 use crate::ga::prune::{PruneAction, PruneOther};
 use crate::ga::reproduction::{ApplyReproduction, GenericReproducer};
+use crate::ga::select::SelectOther;
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct EmptyAction<Subject>(PhantomData<Subject>);
@@ -20,18 +21,20 @@ impl<Subject> GaAction for EmptyAction<Subject> {
 }
 
 #[derive(Clone)]
-pub struct DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe> {
+pub struct DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> {
     pub prune: PruneAction<Subject, Pruner>,
     pub mutation: GenericMutator<Mutator, Subject>,
-    pub reproduction: GenericReproducer<Reproducer, Subject>,
+    pub reproduction: GenericReproducer<Reproducer, Selector, Subject>,
     pub dedupe: DedupeAction<Subject, Dedupe>,
 }
 
-impl<Subject, Pruner, Mutator, Reproducer, Dedupe> GaAction
-    for DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe>
+impl<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> GaAction
+    for DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe>
 where
     Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
     Mutator: ApplyMutation<Subject = Subject>,
+    Selector:
+        for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
     Reproducer: ApplyReproduction<Subject = Subject>,
     Dedupe: DedupeOther<Population<Subject>>,
 {
@@ -45,12 +48,13 @@ where
     }
 }
 
-impl<Subject, Pruner, Mutator, Reproducer, Dedupe> Default
-    for DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe>
+impl<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe> Default
+    for DefaultActions<Subject, Pruner, Mutator, Selector, Reproducer, Dedupe>
 where
     Subject: Default,
     Pruner: Default,
     Mutator: Default,
+    Selector: Default,
     Reproducer: Default,
     Dedupe: Default,
 {
@@ -58,7 +62,7 @@ where
         Self {
             prune: PruneAction::<Subject, Pruner>::default(),
             mutation: GenericMutator::<Mutator, Subject>::default(),
-            reproduction: GenericReproducer::<Reproducer, Subject>::default(),
+            reproduction: GenericReproducer::<Reproducer, Selector, Subject>::default(),
             dedupe: DedupeAction::<Subject, Dedupe>::default(),
         }
     }

@@ -2,9 +2,47 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 
+use crate::ga::GaAction;
 use crate::util::{Bias, random_index_bias};
 
-pub trait SelectRandom<T> {
+pub trait SelectOther<T>: Copy {
+    type Output;
+    fn select_from<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        items: Iter,
+    ) -> Self::Output;
+}
+
+#[derive(Debug, Copy, Clone, Default)]
+pub struct GenericSelector<S>(pub S);
+
+impl<S> GenericSelector<S> {
+    pub fn new(selector: S) -> Self {
+        Self(selector)
+    }
+}
+
+impl<T, S> SelectOther<T> for GenericSelector<S>
+where
+    S: SelectOther<T, Output = Vec<T>>,
+{
+    type Output = Vec<T>;
+
+    fn select_from<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        items: Iter,
+    ) -> Self::Output {
+        self.0.select_from(items)
+    }
+}
+
+pub trait SelectOtherRandom<T> {
     type Output;
     fn select_random<
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
@@ -15,7 +53,7 @@ pub trait SelectRandom<T> {
     ) -> Self::Output;
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct SelectRandomWithBias {
     bias: Bias,
 }
@@ -29,7 +67,20 @@ impl SelectRandomWithBias {
     }
 }
 
-impl<T> SelectRandom<T> for SelectRandomWithBias {
+impl<T> SelectOther<T> for SelectRandomWithBias {
+    type Output = Option<T>;
+    fn select_from<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        items: Iter,
+    ) -> Self::Output {
+        self.select_random(items)
+    }
+}
+
+impl<T> SelectOtherRandom<T> for SelectRandomWithBias {
     type Output = Option<T>;
     fn select_random<
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,
@@ -43,7 +94,7 @@ impl<T> SelectRandom<T> for SelectRandomWithBias {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct SelectRandomManyWithBias {
     amount: usize,
     bias: Bias,
@@ -103,7 +154,20 @@ impl SelectRandomManyWithBias {
     }
 }
 
-impl<T> SelectRandom<T> for SelectRandomManyWithBias {
+impl<T> SelectOther<T> for SelectRandomManyWithBias {
+    type Output = Vec<T>;
+    fn select_from<
+        Iter: IntoIterator<Item = T, IntoIter = Iter2>,
+        Iter2: Iterator<Item = T> + ExactSizeIterator,
+    >(
+        self,
+        items: Iter,
+    ) -> Self::Output {
+        self.select_random(items)
+    }
+}
+
+impl<T> SelectOtherRandom<T> for SelectRandomManyWithBias {
     type Output = Vec<T>;
     fn select_random<
         Iter: IntoIterator<Item = T, IntoIter = Iter2>,

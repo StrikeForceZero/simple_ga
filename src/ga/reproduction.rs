@@ -9,6 +9,7 @@ use crate::ga::{GaAction, GaContext, WeightedAction};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
+use crate::ga::select::{GenericSelector, SelectOther};
 use crate::ga::subject::GaSubject;
 use crate::util::{coin_flip, Odds, rng};
 
@@ -17,13 +18,13 @@ pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {
 }
 
 #[derive(Clone)]
-pub struct GenericReproducer<Reproducer, Subject> {
+pub struct GenericReproducer<Reproducer, Selector, Subject> {
     _marker: PhantomData<Subject>,
-    options: ApplyReproductionOptions<Reproducer>,
+    options: ApplyReproductionOptions<Reproducer, Selector>,
 }
 
-impl<Reproducer, Subject> GenericReproducer<Reproducer, Subject> {
-    pub fn new(options: ApplyReproductionOptions<Reproducer>) -> Self {
+impl<Reproducer, Selector, Subject> GenericReproducer<Reproducer, Selector, Subject> {
+    pub fn new(options: ApplyReproductionOptions<Reproducer, Selector>) -> Self {
         Self {
             _marker: PhantomData,
             options,
@@ -31,10 +32,11 @@ impl<Reproducer, Subject> GenericReproducer<Reproducer, Subject> {
     }
 }
 
-impl<Reproducer, Subject> Default for GenericReproducer<Reproducer, Subject>
+impl<Reproducer, Selector, Subject> Default for GenericReproducer<Reproducer, Selector, Subject>
 where
     Subject: Default,
     Reproducer: Default,
+    Selector: Default,
 {
     fn default() -> Self {
         Self::new(ApplyReproductionOptions::default())
@@ -43,8 +45,8 @@ where
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct ApplyReproductionOptions<Reproducer> {
-    pub reproduction_limit: usize,
+pub struct ApplyReproductionOptions<Reproducer, Selector> {
+    pub selector: GenericSelector<Selector>,
     pub overall_reproduction_chance: Odds,
     /// - `true`: allows each reproduction defined to be applied when `P(A∩B)`
     ///     - A: `overall_reproduction_chance`
@@ -66,16 +68,20 @@ pub trait ApplyReproduction {
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
-pub fn apply_reproductions<Reproducer: ApplyReproduction>(
+pub fn apply_reproductions<
+    Subject,
+    Reproducer: ApplyReproduction<Subject = Subject>,
+    Selector: for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
+>(
     context: &GaContext,
-    population: &mut Population<Reproducer::Subject>,
-    options: &ApplyReproductionOptions<Reproducer>,
+    population: &mut Population<Subject>,
+    options: &ApplyReproductionOptions<Reproducer, Selector>,
 ) {
     let rng = &mut rng::thread_rng();
     let mut appended_subjects = vec![];
-    // TODO: we probably need criteria on who can reproduce with who
-    for (subject_a, subject_b) in population
-        .select_front_bias_random(options.reproduction_limit)
+    for (subject_a, subject_b) in options
+        .selector
+        .select_from(&population.subjects)
         .iter()
         .tuple_windows()
     {
@@ -120,9 +126,13 @@ pub fn apply_reproductions<Reproducer: ApplyReproduction>(
     population.subjects.extend(appended_subjects);
 }
 
-impl<Reproducer, Subject> GaAction for GenericReproducer<Reproducer, Subject>
+impl<Reproducer, Selector, Subject> GaAction for GenericReproducer<Reproducer, Selector, Subject>
 where
     Reproducer: ApplyReproduction<Subject = Subject>,
+    Selector: for<'a> SelectOther<
+        &'a FitnessWrapped<Reproducer::Subject>,
+        Output = Vec<&'a FitnessWrapped<Subject>>,
+    >,
 {
     type Subject = Subject;
 

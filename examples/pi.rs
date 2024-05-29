@@ -16,8 +16,9 @@ use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
 };
+use simple_ga::ga::select::{GenericSelector, SelectRandomManyWithBias};
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::rng;
+use simple_ga::util::{Bias, rng};
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();
@@ -240,7 +241,7 @@ fn main() {
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
-        actions: DefaultActions::<_, _, _, _, EmptyDedupe> {
+        actions: DefaultActions::<_, _, _, _, _, EmptyDedupe> {
             prune: PruneAction::new(PruneExtraBackSkipFirst::new(
                 population_size - (population_size as f64 * 0.33).round() as usize,
             )),
@@ -260,7 +261,10 @@ fn main() {
                 ],
             }),
             reproduction: GenericReproducer::new(ApplyReproductionOptions {
-                reproduction_limit: population_size / 10,
+                selector: GenericSelector(SelectRandomManyWithBias::new(
+                    population_size / 10,
+                    Bias::Front,
+                )),
                 multi_reproduction: false,
                 overall_reproduction_chance: 1.0,
                 reproduction_actions: vec![

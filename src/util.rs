@@ -12,8 +12,9 @@ pub fn coin_flip(odds: Odds) -> bool {
     rng::thread_rng().gen_bool(odds)
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub enum Bias {
+    #[default]
     Front,
     FrontInverse,
     Back,

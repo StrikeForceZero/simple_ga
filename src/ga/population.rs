@@ -13,9 +13,8 @@ use rayon::{
 
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
-use crate::ga::select::{SelectRandom, SelectRandomManyWithBias};
+use crate::ga::select::SelectOtherRandom;
 use crate::ga::subject::GaSubject;
-use crate::util::Bias;
 
 #[derive(Clone, Default)]
 pub struct Population<Subject> {
@@ -43,22 +42,17 @@ impl<Subject: Display> Display for Population<Subject> {
     }
 }
 
-impl<Subject: GaSubject + Hash + Eq + PartialEq> Population<Subject> {
+impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
     pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(&mut self, pruner: P) {
         pruner.prune_random(&mut self.subjects);
     }
+
     pub fn select_random<'a, S>(&'a self, selector: S) -> S::Output
     where
-        S: SelectRandom<&'a FitnessWrapped<Subject>>,
+        S: SelectOtherRandom<&'a FitnessWrapped<Subject>>,
         Subject: 'a,
     {
         selector.select_random(&self.subjects)
-    }
-    pub fn select_front_bias_random(&self, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
-        SelectRandomManyWithBias::new(limit, Bias::Front).select_random(&self.subjects)
-    }
-    pub fn select_back_bias_random(&self, limit: usize) -> Vec<&FitnessWrapped<Subject>> {
-        SelectRandomManyWithBias::new(limit, Bias::Back).select_random(&self.subjects)
     }
 
     fn _sort(a: &FitnessWrapped<Subject>, b: &FitnessWrapped<Subject>) -> Ordering {
@@ -77,7 +71,7 @@ impl<Subject: GaSubject + Hash + Eq + PartialEq> Population<Subject> {
 #[cfg(not(feature = "parallel"))]
 impl<Subject> Population<Subject>
 where
-    Subject: GaSubject + Hash + Eq + PartialEq,
+    Subject: Hash + Eq + PartialEq,
 {
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
@@ -109,7 +103,7 @@ where
 #[cfg(feature = "parallel")]
 impl<Subject> Population<Subject>
 where
-    Subject: GaSubject + Hash + Eq + PartialEq,
+    Subject: Hash + Eq + PartialEq,
 {
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
@@ -143,7 +137,7 @@ mod tests {
     use crate::ga::fitness::{Fitness, FitnessWrapped};
     use crate::ga::population::Population;
     use crate::ga::prune::PruneSingleBackSkipFirst;
-    use crate::ga::select::SelectRandomManyWithBias;
+    use crate::ga::select::{SelectOther, SelectRandomManyWithBias};
     use crate::util::Bias;
 
     fn test_subject(id: u32) -> FitnessWrapped<u32> {
@@ -186,7 +180,8 @@ mod tests {
     fn test_select_front() {
         let population = make_population(2);
         for n in 0..=2 {
-            let selected = population.select_front_bias_random(n);
+            let selected =
+                SelectRandomManyWithBias::new(n, Bias::Front).select_from(&population.subjects);
             assert_eq!(selected.len(), n);
         }
     }
@@ -195,7 +190,8 @@ mod tests {
     fn test_select_back() {
         let population = make_population(2);
         for n in 0..=2 {
-            let selected = population.select_back_bias_random(n);
+            let selected =
+                SelectRandomManyWithBias::new(n, Bias::Back).select_from(&population.subjects);
             assert_eq!(selected.len(), n);
         }
     }
