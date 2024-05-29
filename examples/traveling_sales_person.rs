@@ -18,6 +18,16 @@ use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
 
+trait SizeHintCollapse {
+    fn collapse_max(&self) -> usize;
+}
+
+impl SizeHintCollapse for (usize, Option<usize>) {
+    fn collapse_max(&self) -> usize {
+        self.1.unwrap_or(self.0).max(self.0)
+    }
+}
+
 #[derive(Debug, Clone)]
 struct City {
     id: usize,
@@ -89,9 +99,15 @@ impl Route {
 
         // Generate all possible routes
         let all_routes = self.cities.clone().into_iter().permutations(num_cities);
-
+        let size = all_routes.size_hint();
+        let mut ix: u128 = 0;
         // Check if the given route is the shortest
         for r in all_routes {
+            if ix % 10000000 == 0 {
+                let size = size.collapse_max();
+                let percent = (ix as f64 / size as f64 * 10000.0).round() / 100.0;
+                debug!("checking {ix}/{size} {percent}%");
+            }
             let current_route = Route { cities: r };
             if current_route.total_distance() < given_route_distance {
                 debug!(
@@ -100,8 +116,8 @@ impl Route {
                 );
                 return false; // Found a shorter route
             }
+            ix += 1;
         }
-
         true // Given route is the shortest
     }
     fn shortest(&self) -> Route {
@@ -225,7 +241,7 @@ const TARGET_FITNESS: Fitness = 1.0;
 const INITIAL_FITNESS: Fitness = 0.0;
 const MAX_FITNESS: Fitness = Fitness::MAX;
 const MIN_FITNESS: Fitness = 0.0;
-const NUM_CITIES: usize = 15;
+const NUM_CITIES: usize = 12;
 
 fn main() {
     let population_size = 1000;
@@ -270,7 +286,8 @@ fn main() {
         */
     }
 
-    fn check_if_best(ga_context: &GaContext, subject: &Route) {
+    fn check_if_best(_ga_context: &GaContext, subject: &Route) {
+        debug!("checking if best subject is the best possible route...");
         let is_best_route = subject.is_best_possible_route();
         debug!("is best route: {is_best_route}");
         if is_best_route {
@@ -286,7 +303,7 @@ fn main() {
         create_subject_fn: create_subject_fn.clone(),
         cull_amount: (population_size as f32 * 0.5).round() as usize,
         mutation_options: ApplyMutationOptions {
-            clone_on_mutation: false,
+            clone_on_mutation: true,
             multi_mutation: false,
             overall_mutation_chance: 0.75,
             mutation_actions: vec![(Mutation::Swap, 0.5).into()],
