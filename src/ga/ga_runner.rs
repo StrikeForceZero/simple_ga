@@ -5,9 +5,7 @@ use derivative::Derivative;
 use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
-use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
-use crate::ga::reproduction::ApplyReproduction;
 use crate::ga::subject::GaSubject;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]

@@ -12,7 +12,7 @@ use simple_ga::ga::{
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};

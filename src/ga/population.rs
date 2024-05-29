@@ -14,7 +14,6 @@ use rayon::{
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::prune::PruneRandom;
 use crate::ga::select::SelectOtherRandom;
-use crate::ga::subject::GaSubject;
 
 #[derive(Clone, Default)]
 pub struct Population<Subject> {

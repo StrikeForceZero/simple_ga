@@ -6,7 +6,6 @@ use itertools::Itertools;
 
 use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
-use crate::ga::mutation::ApplyMutation;
 use crate::ga::population::Population;
 use crate::ga::select::SelectOther;
 use crate::ga::subject::GaSubject;

@@ -5,7 +5,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
 use rand::Rng;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
@@ -14,18 +14,17 @@ use simple_ga::ga::{
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
+use simple_ga::ga::ga_iterator::GaIterState;
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
-use simple_ga::ga::population::Population;
-use simple_ga::ga::prune::{DefaultPruneHalfBackSkipFirst, PruneAction, PruneExtraBackSkipFirst};
+use simple_ga::ga::prune::{DefaultPruneHalfBackSkipFirst, PruneAction};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, GenericReproducer, ReproductionResult,
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::{Bias, rng};
+use simple_ga::util::Bias;
 
 trait SizeHintCollapse {
     fn collapse_max(&self) -> usize;
@@ -99,9 +98,11 @@ impl Route {
             .sum::<f64>()
             + last_city.distance_to(first_city)
     }
+    #[allow(dead_code)]
     fn calculate_fitness(&self) -> f64 {
         1.0 / self.total_distance()
     }
+    #[allow(dead_code)]
     fn is_best_possible_route(&self) -> bool {
         self.is_best_possible_route_full().0
     }
@@ -132,6 +133,7 @@ impl Route {
         }
         (true, None) // Given route is the shortest
     }
+    #[allow(dead_code)]
     fn shortest(&self) -> Route {
         let num_cities = self.cities.len();
         let all_routes = self.cities.clone().into_iter().permutations(num_cities);
@@ -274,7 +276,7 @@ fn main() {
         println!("{city:?}");
     }
 
-    let create_subject_fn = Box::new(|ga_context: &GaContext| Route {
+    let create_subject_fn = Box::new(|_ga_context: &GaContext| Route {
         cities: shuffled_cities(),
     });
 

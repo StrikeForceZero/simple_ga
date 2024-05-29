@@ -2,17 +2,12 @@ use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
 use derivative::Derivative;
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use tracing::info;
-use tracing::log::{debug, warn};
+use tracing::log::debug;
 
 use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
-use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
-use crate::ga::mutation::{apply_mutations, ApplyMutation};
+use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::population::Population;
-use crate::ga::prune::{PruneExtraBackSkipFirst, PruneRandom};
-use crate::ga::reproduction::{apply_reproductions, ApplyReproduction};
 use crate::ga::subject::GaSubject;
 
 #[derive(Derivative)]

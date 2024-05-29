@@ -145,7 +145,7 @@ impl<T> PruneOther<Vec<T>> for PruneSingleBack {
 impl<T> PruneRandom<Vec<T>> for PruneSingleBack {
     /// Will randomly remove a single item from the back
     fn prune_random(&self, items: &mut Vec<T>) {
-        let mut target_index = random_index_bias(items.len(), Bias::Back);
+        let target_index = random_index_bias(items.len(), Bias::Back);
         items.drain(target_index..target_index + 1);
     }
 }
@@ -163,7 +163,7 @@ impl<T> PruneOther<Vec<T>> for PruneSingleFront {
 impl<T> PruneRandom<Vec<T>> for PruneSingleFront {
     /// Will randomly remove a single item from the front
     fn prune_random(&self, items: &mut Vec<T>) {
-        let mut target_index = random_index_bias(items.len(), Bias::Front);
+        let target_index = random_index_bias(items.len(), Bias::Front);
         items.drain(target_index..target_index + 1);
     }
 }
