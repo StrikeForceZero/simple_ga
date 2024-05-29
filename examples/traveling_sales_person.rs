@@ -11,13 +11,13 @@ use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
 use simple_ga::ga::action::DefaultActions;
-use simple_ga::ga::dedupe::DedupeAction;
+use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::population::Population;
-use simple_ga::ga::prune::{PruneAction, PruneExtraSkipFirst};
+use simple_ga::ga::prune::{DefaultPruneHalfBackSkipFirst, PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
@@ -311,9 +311,7 @@ fn main() {
         fitness_range: MIN_FITNESS..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
         actions: DefaultActions {
-            prune: PruneAction::new(PruneExtraSkipFirst::new(
-                population_size - (population_size as f64 * 0.5).round() as usize,
-            )),
+            prune: PruneAction::new(DefaultPruneHalfBackSkipFirst),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: true,
                 multi_mutation: false,
@@ -326,7 +324,7 @@ fn main() {
                 overall_reproduction_chance: 0.25,
                 reproduction_actions: vec![(Reproduction::Reproduce, 0.50).into()],
             }),
-            dedupe: Some(DedupeAction::default()),
+            dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
         },
     };
 

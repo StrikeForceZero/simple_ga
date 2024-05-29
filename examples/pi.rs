@@ -8,10 +8,11 @@ use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
 use simple_ga::ga::action::DefaultActions;
+use simple_ga::ga::dedupe::EmptyDedupe;
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
-use simple_ga::ga::prune::{PruneAction, PruneExtraSkipFirst};
+use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
 };
@@ -80,7 +81,10 @@ fn random_pos_add(input: f64, pos: usize, amount: i8) -> f64 {
         + input
 }
 
+#[derive(Debug, Copy, Clone, Default)]
 enum MutatorFns {
+    #[default]
+    NoOp,
     AddOne,
     SubOne,
     AddRandom,
@@ -100,6 +104,7 @@ impl ApplyMutation for MutatorFns {
         let subject_f64 = subject.as_f64();
         let rng = &mut rng::thread_rng();
         let mutated_result = match self {
+            Self::NoOp => panic!("noop mutator fn only used to satisfy default impl"),
             MutatorFns::AddOne => subject_f64 + 1.0,
             MutatorFns::SubOne => subject_f64 - 1.0,
             MutatorFns::AddRandom => subject_f64 + random_f64(rng),
@@ -120,7 +125,10 @@ impl ApplyMutation for MutatorFns {
     }
 }
 
+#[derive(Debug, Copy, Clone, Default)]
 enum ReproductionFns {
+    #[default]
+    NoOp,
     SexualGenetic,
     SexualHalf,
     ASexual,
@@ -140,6 +148,7 @@ impl ApplyReproduction for ReproductionFns {
         let b = subject_b.as_f64();
 
         let (a, b) = match self {
+            Self::NoOp => panic!("noop reproductive fn only used to satisfy default impl"),
             ReproductionFns::SexualGenetic => {
                 // TODO: this is wasting hundreds of calculation cycles
                 let fitness_a = Self::fitness(subject_a);
@@ -231,8 +240,8 @@ fn main() {
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
-        actions: DefaultActions {
-            prune: PruneAction::new(PruneExtraSkipFirst::new(
+        actions: DefaultActions::<_, _, _, _, EmptyDedupe> {
+            prune: PruneAction::new(PruneExtraBackSkipFirst::new(
                 population_size - (population_size as f64 * 0.33).round() as usize,
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
@@ -261,7 +270,7 @@ fn main() {
                     (ReproductionFns::ZipDecimal, 0.60).into(),
                 ],
             }),
-            dedupe: None,
+            ..Default::default()
         },
     };
 

@@ -24,6 +24,16 @@ impl<Mutator, Subject> GenericMutator<Mutator, Subject> {
     }
 }
 
+impl<Mutator, Subject> Default for GenericMutator<Mutator, Subject>
+where
+    Subject: Default,
+    Mutator: Default,
+{
+    fn default() -> Self {
+        Self::new(ApplyMutationOptions::default())
+    }
+}
+
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct ApplyMutationOptions<Mutator> {

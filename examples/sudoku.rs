@@ -9,11 +9,11 @@ use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
 use simple_ga::ga::action::DefaultActions;
-use simple_ga::ga::dedupe::DedupeAction;
+use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
-use simple_ga::ga::prune::{PruneAction, PruneExtraSkipFirst};
+use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
@@ -543,7 +543,7 @@ fn main() {
         fitness_range: target_fitness..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
         actions: DefaultActions {
-            prune: PruneAction::new(PruneExtraSkipFirst::new(
+            prune: PruneAction::new(PruneExtraBackSkipFirst::new(
                 population_size - (population_size as f64 * 0.5).round() as usize,
             )),
             mutation: GenericMutator::new(ApplyMutationOptions {
@@ -562,7 +562,7 @@ fn main() {
                 overall_reproduction_chance: 0.25,
                 reproduction_actions: vec![(ReproductionFn::RandomMix, 0.50).into()],
             }),
-            dedupe: Some(DedupeAction::default()),
+            dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
         },
     };
 

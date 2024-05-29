@@ -24,7 +24,7 @@ pub struct DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe> {
     pub prune: PruneAction<Subject, Pruner>,
     pub mutation: GenericMutator<Mutator, Subject>,
     pub reproduction: GenericReproducer<Reproducer, Subject>,
-    pub dedupe: Option<DedupeAction<Subject, Dedupe>>,
+    pub dedupe: DedupeAction<Subject, Dedupe>,
 }
 
 impl<Subject, Pruner, Mutator, Reproducer, Dedupe> GaAction
@@ -41,8 +41,25 @@ where
         self.prune.perform_action(context, population);
         self.mutation.perform_action(context, population);
         self.reproduction.perform_action(context, population);
-        if let Some(dedupe) = &self.dedupe {
-            dedupe.perform_action(context, population);
+        self.dedupe.perform_action(context, population);
+    }
+}
+
+impl<Subject, Pruner, Mutator, Reproducer, Dedupe> Default
+    for DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe>
+where
+    Subject: Default,
+    Pruner: Default,
+    Mutator: Default,
+    Reproducer: Default,
+    Dedupe: Default,
+{
+    fn default() -> Self {
+        Self {
+            prune: PruneAction::<Subject, Pruner>::default(),
+            mutation: GenericMutator::<Mutator, Subject>::default(),
+            reproduction: GenericReproducer::<Reproducer, Subject>::default(),
+            dedupe: DedupeAction::<Subject, Dedupe>::default(),
         }
     }
 }

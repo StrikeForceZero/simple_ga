@@ -142,7 +142,7 @@ mod tests {
 
     use crate::ga::fitness::{Fitness, FitnessWrapped};
     use crate::ga::population::Population;
-    use crate::ga::prune::PruneSingleSkipFirst;
+    use crate::ga::prune::PruneSingleBackSkipFirst;
     use crate::ga::select::SelectRandomManyWithBias;
     use crate::util::Bias;
 
@@ -168,7 +168,7 @@ mod tests {
         let size = 3;
         let mut population = make_population(size);
         for n in 1..3 {
-            population.prune_random(PruneSingleSkipFirst);
+            population.prune_random(PruneSingleBackSkipFirst);
             assert_eq!(population.subjects.len(), size - n);
         }
     }

@@ -12,6 +12,15 @@ pub trait DedupeOther<T> {
     fn dedupe(&self, items: &mut T);
 }
 
+#[derive(Debug, Copy, Clone, Default)]
+pub struct EmptyDedupe;
+
+impl<T> DedupeOther<T> for EmptyDedupe {
+    fn dedupe(&self, _items: &mut T) {
+        // no op
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct DedupeAction<T, D> {
     _marker: PhantomData<T>,
@@ -27,9 +36,12 @@ impl<T, D> DedupeAction<T, D> {
     }
 }
 
-impl<Subject> Default for DedupeAction<Subject, DefaultDedupe<Subject>> {
+impl<Subject, Dedupe> Default for DedupeAction<Subject, Dedupe>
+where
+    Dedupe: Default,
+{
     fn default() -> Self {
-        Self::new(DefaultDedupe::default())
+        Self::new(Dedupe::default())
     }
 }
 

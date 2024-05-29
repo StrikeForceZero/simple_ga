@@ -50,6 +50,18 @@ pub struct WeightedAction<Action> {
     pub weight: Odds,
 }
 
+impl<Action> Default for WeightedAction<Action>
+where
+    Action: Default,
+{
+    fn default() -> Self {
+        Self {
+            weight: 0.0,
+            action: Action::default(),
+        }
+    }
+}
+
 impl<Action: Hash> Hash for WeightedAction<Action> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.action.hash(state);

@@ -11,7 +11,7 @@ use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::mutation::{apply_mutations, ApplyMutation};
 use crate::ga::population::Population;
-use crate::ga::prune::{PruneExtraSkipFirst, PruneRandom};
+use crate::ga::prune::{PruneExtraBackSkipFirst, PruneRandom};
 use crate::ga::reproduction::{apply_reproductions, ApplyReproduction};
 use crate::ga::subject::GaSubject;
 

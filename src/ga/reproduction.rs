@@ -31,6 +31,16 @@ impl<Reproducer, Subject> GenericReproducer<Reproducer, Subject> {
     }
 }
 
+impl<Reproducer, Subject> Default for GenericReproducer<Reproducer, Subject>
+where
+    Subject: Default,
+    Reproducer: Default,
+{
+    fn default() -> Self {
+        Self::new(ApplyReproductionOptions::default())
+    }
+}
+
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct ApplyReproductionOptions<Reproducer> {
