@@ -132,7 +132,7 @@ where
 
     pub fn debug_print(&self, subject: &Subject) {
         if let Some(debug_print) = self.ga_iter_options.debug_print {
-            debug_print(&subject);
+            debug_print(subject);
         }
     }
 

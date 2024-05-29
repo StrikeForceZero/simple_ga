@@ -241,7 +241,7 @@ impl ApplyReproduction for Reproduction {
                 }
 
                 let route = Route {
-                    cities: child_cities.into_iter().filter_map(|c| c).collect(),
+                    cities: child_cities.into_iter().flatten().collect(),
                 };
                 Some(ReproductionResult::Single(route))
             }
@@ -296,9 +296,7 @@ fn main() {
             return None;
         }
         info!("generation: {}", iter_state.context().generation);
-        let Some(best_subject) = iter_state.population.subjects.first() else {
-            return None;
-        };
+        let best_subject = iter_state.population.subjects.first()?;
         debug!("checking if best subject is the best possible route...");
         let (is_best_route, better_route_opt) =
             best_subject.subject().is_best_possible_route_full();
@@ -306,11 +304,9 @@ fn main() {
         if is_best_route {
             debug!("{best_subject}");
             return Some(GaRunnerCustomForEachGenerationResult::Terminate);
-        } else {
-            if let Some(better_route) = better_route_opt {
-                // this is basically cheating but it's a good example of manipulating the runner
-                iter_state.population.add(better_route.into());
-            }
+        } else if let Some(better_route) = better_route_opt {
+            // this is basically cheating but it's a good example of manipulating the runner
+            iter_state.population.add(better_route.into());
         }
         None
     }

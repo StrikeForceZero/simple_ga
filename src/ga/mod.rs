@@ -76,7 +76,7 @@ impl<Action: Clone> SampleSelf for WeightedActionsSampleOne<Action> {
             .iter()
             .map(|weighted_action| weighted_action.weight)
             .collect();
-        let dist = WeightedIndex::new(&weights).expect("Weights/Odds should not be all zero");
+        let dist = WeightedIndex::new(weights).expect("Weights/Odds should not be all zero");
         let index = dist.sample(rng);
         vec![self.0[index].action.clone()]
     }

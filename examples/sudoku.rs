@@ -289,7 +289,7 @@ impl Board {
                     (true, true, true) => "[RCS]",
                 })
             }
-            output.push_str("\n");
+            output.push('\n');
         }
         output
     }
@@ -318,7 +318,7 @@ impl Display for Board {
                     write!(f, "[ ]")?;
                 }
             }
-            writeln!(f, "")?;
+            writeln!(f)?;
         }
         write!(f, "")
     }
@@ -408,7 +408,7 @@ impl ApplyMutation for MutatorFn {
                         .enumerate()
                         .map(move |(col_ix, col)| (row_ix, col_ix, *col))
                 })
-                .filter(|(_, _, col)| (&predicate)(*col));
+                .filter(|(_, _, col)| predicate(*col));
             cells.choose(rng)
         }
         WrappedBoard::create_mutation(
