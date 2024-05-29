@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::ga::{GaAction, GaContext};
+use crate::ga::dedupe::{DedupeAction, DedupeOther};
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::mutation::{ApplyMutation, GenericMutator};
 use crate::ga::population::Population;
@@ -19,18 +20,20 @@ impl<Subject> GaAction for EmptyAction<Subject> {
 }
 
 #[derive(Clone)]
-pub struct DefaultActions<Subject, Pruner, Mutator, Reproducer> {
+pub struct DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe> {
     pub prune: PruneAction<Subject, Pruner>,
     pub mutation: GenericMutator<Mutator, Subject>,
     pub reproduction: GenericReproducer<Reproducer, Subject>,
+    pub dedupe: Option<DedupeAction<Subject, Dedupe>>,
 }
 
-impl<Subject, Pruner, Mutator, Reproducer> GaAction
-    for DefaultActions<Subject, Pruner, Mutator, Reproducer>
+impl<Subject, Pruner, Mutator, Reproducer, Dedupe> GaAction
+    for DefaultActions<Subject, Pruner, Mutator, Reproducer, Dedupe>
 where
     Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
+    Dedupe: DedupeOther<Population<Subject>>,
 {
     type Subject = Subject;
 
@@ -38,5 +41,8 @@ where
         self.prune.perform_action(context, population);
         self.mutation.perform_action(context, population);
         self.reproduction.perform_action(context, population);
+        if let Some(dedupe) = &self.dedupe {
+            dedupe.perform_action(context, population);
+        }
     }
 }

@@ -228,7 +228,6 @@ fn main() {
         Box::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
 
     let ga_options = GeneticAlgorithmOptions {
-        remove_duplicates: false,
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
@@ -262,6 +261,7 @@ fn main() {
                     (ReproductionFns::ZipDecimal, 0.60).into(),
                 ],
             }),
+            dedupe: None,
         },
     };
 

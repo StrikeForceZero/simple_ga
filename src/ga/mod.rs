@@ -9,6 +9,7 @@ use crate::ga::population::Population;
 use crate::util::Odds;
 
 pub mod action;
+pub mod dedupe;
 pub mod fitness;
 pub mod ga_iterator;
 pub mod ga_runner;
@@ -65,7 +66,6 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
 pub struct GeneticAlgorithmOptions<CreateSubjectFn, Actions> {
-    pub remove_duplicates: bool,
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop

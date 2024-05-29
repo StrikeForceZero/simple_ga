@@ -11,6 +11,7 @@ use simple_ga::ga::{
     create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
 };
 use simple_ga::ga::action::DefaultActions;
+use simple_ga::ga::dedupe::DedupeAction;
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
@@ -306,7 +307,6 @@ fn main() {
     }
 
     let ga_options = GeneticAlgorithmOptions {
-        remove_duplicates: false,
         fitness_initial_to_target_range: INITIAL_FITNESS..TARGET_FITNESS,
         fitness_range: MIN_FITNESS..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
@@ -326,6 +326,7 @@ fn main() {
                 overall_reproduction_chance: 0.25,
                 reproduction_actions: vec![(Reproduction::Reproduce, 0.50).into()],
             }),
+            dedupe: Some(DedupeAction::default()),
         },
     };
 

@@ -187,62 +187,6 @@ where
         self.options
             .actions
             .perform_action(&self.state.context, &mut self.state.population);
-        if self.options.remove_duplicates {
-            #[cfg(feature = "parallel")]
-            let indexes_to_delete = {
-                use dashmap::DashSet;
-                DashSet::new()
-            };
-            #[cfg(not(feature = "parallel"))]
-            let mut indexes_to_delete = {
-                use std::collections::HashSet;
-                HashSet::new()
-            };
-
-            self.state
-                .population
-                .iter()
-                .enumerate()
-                .for_each(|(a_ix, a_subject)| {
-                    if indexes_to_delete.contains(&a_ix) {
-                        return;
-                    }
-                    self.state
-                        .population
-                        .iter()
-                        .enumerate()
-                        .for_each(|(b_ix, b_subject)| {
-                            if a_ix == b_ix || indexes_to_delete.contains(&b_ix) {
-                                return;
-                            }
-                            if b_subject.fitness() == a_subject.fitness()
-                                && b_subject.subject() == a_subject.subject()
-                            {
-                                indexes_to_delete.insert(b_ix);
-                            }
-                        });
-                });
-            let indexes_to_delete = {
-                #[cfg(feature = "parallel")]
-                {
-                    let mut indexes_to_delete =
-                        indexes_to_delete.into_par_iter().collect::<Vec<_>>();
-                    indexes_to_delete.par_sort_unstable();
-                    indexes_to_delete
-                }
-                #[cfg(not(feature = "parallel"))]
-                {
-                    use itertools::Itertools;
-                    indexes_to_delete.into_iter().sorted()
-                }
-            };
-            for ix in indexes_to_delete.into_iter().rev() {
-                if self.state.population.subjects.len() <= self.state.population.pool_size {
-                    continue;
-                }
-                self.state.population.subjects.remove(ix);
-            }
-        }
         while self.state.population.subjects.len() < self.state.population.pool_size {
             let new_subject = (&self.options.create_subject_fn)(&mut self.state.context);
             let fitness_wrapped: FitnessWrapped<Subject> = new_subject.into();
