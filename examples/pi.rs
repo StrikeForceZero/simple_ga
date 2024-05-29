@@ -11,6 +11,7 @@ use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
+use simple_ga::ga::prune::{PruneAction, PruneExtraSkipFirst};
 use simple_ga::ga::reproduction::{
     ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
 };
@@ -231,8 +232,10 @@ fn main() {
         fitness_initial_to_target_range: 0f64..target_fitness,
         fitness_range: 0f64..target_fitness,
         create_subject_fn: create_subject_fn.clone(),
-        cull_amount: (population_size as f64 * 0.33).round() as usize,
         actions: DefaultActions {
+            prune: PruneAction::new(PruneExtraSkipFirst::new(
+                population_size - (population_size as f64 * 0.33).round() as usize,
+            )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: false,
                 multi_mutation: false,

@@ -1,17 +1,58 @@
+use std::marker::PhantomData;
+
+use crate::ga::{GaAction, GaContext};
+use crate::ga::fitness::FitnessWrapped;
+use crate::ga::population::Population;
 use crate::util::{Bias, random_index_bias};
 
+#[derive(Debug, Default, Copy, Clone)]
+pub struct PruneAction<T, P> {
+    _marker: PhantomData<T>,
+    action: P,
+}
+
+impl<T, P> PruneAction<T, P> {
+    pub fn new(action: P) -> Self {
+        Self {
+            _marker: PhantomData,
+            action,
+        }
+    }
+}
+
+impl<Subject, P> GaAction for PruneAction<Subject, P>
+where
+    P: PruneOther<Vec<FitnessWrapped<Subject>>>,
+{
+    type Subject = Subject;
+
+    fn perform_action(&self, _context: &GaContext, population: &mut Population<Self::Subject>) {
+        self.action.prune(&mut population.subjects);
+    }
+}
+
+pub trait PruneOther<T> {
+    fn prune(&self, items: &mut T);
+}
+
 pub trait PruneRandom<T> {
-    fn prune_random(self, items: &mut T);
+    fn prune_random(&self, items: &mut T);
 }
 
 #[derive(Debug, Copy, Clone)]
 /// Used for pruning a single item
 pub struct PruneSingleSkipFirst;
 
+impl<T> PruneOther<Vec<T>> for PruneSingleSkipFirst {
+    fn prune(&self, items: &mut Vec<T>) {
+        self.prune_random(items);
+    }
+}
+
 impl<T> PruneRandom<Vec<T>> for PruneSingleSkipFirst {
     /// Will randomly remove a single item
     /// Skips the first entry
-    fn prune_random(self, items: &mut Vec<T>) {
+    fn prune_random(&self, items: &mut Vec<T>) {
         let mut target_index = 0;
         while target_index == 0 {
             target_index = random_index_bias(items.len(), Bias::Back);
@@ -37,10 +78,16 @@ impl PruneExtraSkipFirst {
     }
 }
 
+impl<T> PruneOther<Vec<T>> for PruneExtraSkipFirst {
+    fn prune(&self, items: &mut Vec<T>) {
+        self.prune_random(items);
+    }
+}
+
 impl<T> PruneRandom<Vec<T>> for PruneExtraSkipFirst {
     /// Will randomly remove items until it reaches the desired length
     /// Skips the first entry
-    fn prune_random(self, items: &mut Vec<T>) {
+    fn prune_random(&self, items: &mut Vec<T>) {
         while items.len() > self.max_length {
             PruneSingleSkipFirst.prune_random(items);
         }

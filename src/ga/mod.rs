@@ -71,7 +71,6 @@ pub struct GeneticAlgorithmOptions<CreateSubjectFn, Actions> {
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
     pub create_subject_fn: CreateSubjectFn,
-    pub cull_amount: usize,
     pub actions: Actions,
 }
 

@@ -184,9 +184,6 @@ where
             }
         }
 
-        PruneExtraSkipFirst::new(self.state.population.pool_size - self.options.cull_amount)
-            .prune_random(&mut self.state.population.subjects);
-
         self.options
             .actions
             .perform_action(&self.state.context, &mut self.state.population);

@@ -16,6 +16,7 @@ use simple_ga::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::population::Population;
+use simple_ga::ga::prune::{PruneAction, PruneExtraSkipFirst};
 use simple_ga::ga::reproduction::{ApplyReproduction, ApplyReproductionOptions, GenericReproducer};
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::util::rng;
@@ -309,8 +310,10 @@ fn main() {
         fitness_initial_to_target_range: INITIAL_FITNESS..TARGET_FITNESS,
         fitness_range: MIN_FITNESS..MAX_FITNESS,
         create_subject_fn: create_subject_fn.clone(),
-        cull_amount: (population_size as f32 * 0.5).round() as usize,
         actions: DefaultActions {
+            prune: PruneAction::new(PruneExtraSkipFirst::new(
+                population_size - (population_size as f64 * 0.5).round() as usize,
+            )),
             mutation: GenericMutator::new(ApplyMutationOptions {
                 clone_on_mutation: true,
                 multi_mutation: false,

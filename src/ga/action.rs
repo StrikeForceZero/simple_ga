@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 
 use crate::ga::{GaAction, GaContext};
+use crate::ga::fitness::FitnessWrapped;
 use crate::ga::mutation::{ApplyMutation, GenericMutator};
 use crate::ga::population::Population;
+use crate::ga::prune::{PruneAction, PruneOther};
 use crate::ga::reproduction::{ApplyReproduction, GenericReproducer};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -17,19 +19,23 @@ impl<Subject> GaAction for EmptyAction<Subject> {
 }
 
 #[derive(Clone)]
-pub struct DefaultActions<Subject, Mutator, Reproducer> {
+pub struct DefaultActions<Subject, Pruner, Mutator, Reproducer> {
+    pub prune: PruneAction<Subject, Pruner>,
     pub mutation: GenericMutator<Mutator, Subject>,
     pub reproduction: GenericReproducer<Reproducer, Subject>,
 }
 
-impl<Subject, Mutator, Reproducer> GaAction for DefaultActions<Subject, Mutator, Reproducer>
+impl<Subject, Pruner, Mutator, Reproducer> GaAction
+    for DefaultActions<Subject, Pruner, Mutator, Reproducer>
 where
+    Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
     Mutator: ApplyMutation<Subject = Subject>,
     Reproducer: ApplyReproduction<Subject = Subject>,
 {
     type Subject = Subject;
 
     fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+        self.prune.perform_action(context, population);
         self.mutation.perform_action(context, population);
         self.reproduction.perform_action(context, population);
     }
