@@ -103,7 +103,7 @@ where
 #[cfg(feature = "parallel")]
 impl<Subject> Population<Subject>
 where
-    Subject: Hash + Eq + PartialEq,
+    Subject: Sync + Send + Hash + Eq + PartialEq,
 {
     pub fn sort(&mut self) {
         let population = &mut self.subjects;
