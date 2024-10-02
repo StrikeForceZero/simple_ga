@@ -330,7 +330,7 @@ fn main() {
                 )
                     .into()]),
             }),
-            dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
+            dedupe: DedupeAction::<_, EmptyDedupe>::default(),
             inflate: InflateUntilFull(create_subject_fn.clone()),
         },
     };
