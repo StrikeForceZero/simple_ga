@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::ga::{GaAction, GaContext};
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::population::Population;
-use crate::util::{Bias, random_index_bias};
+use crate::ga::{GaAction, GaContext};
+use crate::util::{random_index_bias, Bias};
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct EmptyPrune;

@@ -1,8 +1,8 @@
 pub mod tracing {
     use std::sync::Once;
 
-    use tracing_subscriber::EnvFilter;
     use tracing_subscriber::fmt::format::FmtSpan;
+    use tracing_subscriber::EnvFilter;
 
     static TRACING_SUBSCRIBER: Once = Once::new();
 
@@ -24,9 +24,9 @@ pub mod test_rng {
     use std::cell::UnsafeCell;
     use std::rc::Rc;
 
-    use rand::{CryptoRng, Error, RngCore, SeedableRng};
     use rand::prelude::StdRng;
     use rand::rngs::mock::StepRng;
+    use rand::{CryptoRng, Error, RngCore, SeedableRng};
 
     pub fn custom_rng(initial: u64, increment: u64) -> StdRng {
         match StdRng::from_rng(StepRng::new(initial, increment)) {

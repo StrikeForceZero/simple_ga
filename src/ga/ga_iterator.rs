@@ -5,10 +5,10 @@ use derivative::Derivative;
 use tracing::info;
 use tracing::log::debug;
 
-use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 
 #[derive(Derivative)]
 #[derivative(Debug)]

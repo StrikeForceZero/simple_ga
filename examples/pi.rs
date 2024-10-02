@@ -4,10 +4,6 @@ use lazy_static::lazy_static;
 use rand::Rng;
 use tracing::{debug, info};
 
-use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
-    WeightedActionsSampleOne,
-};
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, EmptyDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
@@ -16,12 +12,16 @@ use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
 use simple_ga::ga::reproduction::{
-    ApplyReproduction, ApplyReproductionOptions, asexual_reproduction, GenericReproducer,
+    asexual_reproduction, ApplyReproduction, ApplyReproductionOptions, GenericReproducer,
     ReproductionResult,
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::{ApplyRatioFloat64, Bias, rng};
+use simple_ga::ga::{
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
+};
+use simple_ga::util::{rng, ApplyRatioFloat64, Bias};
 
 lazy_static! {
     static ref PI_STRING: String = std::f64::consts::PI.to_string();

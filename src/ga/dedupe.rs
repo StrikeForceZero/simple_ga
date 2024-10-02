@@ -4,9 +4,9 @@ use std::marker::PhantomData;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::ga::{GaAction, GaContext};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext};
 
 pub trait DedupeOther<T> {
     fn dedupe(&self, items: &mut T);

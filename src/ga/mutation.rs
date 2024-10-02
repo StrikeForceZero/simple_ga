@@ -2,10 +2,10 @@ use std::marker::PhantomData;
 
 use derivative::Derivative;
 
-use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::util::{coin_flip, Odds};
 
 #[derive(Clone)]

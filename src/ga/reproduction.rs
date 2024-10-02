@@ -4,11 +4,11 @@ use std::marker::PhantomData;
 use derivative::Derivative;
 use itertools::Itertools;
 
-use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::fitness::{Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::ga::select::SelectOther;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::util::{coin_flip, Odds};
 
 pub fn asexual_reproduction<Subject: Clone>(subject: &Subject) -> Subject {

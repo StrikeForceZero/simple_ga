@@ -1,9 +1,9 @@
 use std::hash::Hash;
 
-use crate::ga::{GaAction, GaContext};
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext};
 
 pub trait InflateTarget {
     type Params;

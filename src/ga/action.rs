@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use crate::ga::{GaAction, GaContext, SampleSelf};
 use crate::ga::dedupe::{DedupeAction, DedupeOther};
 use crate::ga::fitness::FitnessWrapped;
 use crate::ga::inflate::InflateTarget;
@@ -9,6 +8,7 @@ use crate::ga::population::Population;
 use crate::ga::prune::{PruneAction, PruneOther};
 use crate::ga::reproduction::{ApplyReproduction, GenericReproducer};
 use crate::ga::select::SelectOther;
+use crate::ga::{GaAction, GaContext, SampleSelf};
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct EmptyAction<Subject>(PhantomData<Subject>);

@@ -5,10 +5,6 @@ use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::Rng;
 use tracing::{debug, info};
 
-use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
-    WeightedActionsSampleOne,
-};
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
@@ -21,7 +17,11 @@ use simple_ga::ga::reproduction::{
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
-use simple_ga::util::{ApplyRatioFloat64, Bias, rng};
+use simple_ga::ga::{
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
+};
+use simple_ga::util::{rng, ApplyRatioFloat64, Bias};
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 struct SudokuValidationGroup {

@@ -8,7 +8,7 @@ use rand::prelude::Distribution;
 
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::population::Population;
-use crate::util::{coin_flip, Odds, rng};
+use crate::util::{coin_flip, rng, Odds};
 
 pub mod action;
 pub mod dedupe;

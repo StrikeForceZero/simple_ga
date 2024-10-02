@@ -7,12 +7,8 @@ use rand::prelude::SliceRandom;
 use rand::Rng;
 use tracing::{debug, info};
 
-use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
-    WeightedActionsSampleOne,
-};
 use simple_ga::ga::action::DefaultActions;
-use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe};
+use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe, EmptyDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
 use simple_ga::ga::ga_iterator::GaIterState;
 use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
@@ -24,6 +20,10 @@ use simple_ga::ga::reproduction::{
 };
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
+use simple_ga::ga::{
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
+};
 use simple_ga::util::Bias;
 
 trait SizeHintCollapse {

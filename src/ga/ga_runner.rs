@@ -2,11 +2,11 @@ use std::hash::Hash;
 
 use derivative::Derivative;
 
-use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 use crate::ga::fitness::{Fit, Fitness};
-use crate::ga::ga_iterator::{GaIterator, GaIterOptions, GaIterState};
+use crate::ga::ga_iterator::{GaIterOptions, GaIterState, GaIterator};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
+use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GaRunnerCustomForEachGenerationResult {

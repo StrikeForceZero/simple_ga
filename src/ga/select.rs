@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 
-use crate::util::{Bias, random_index_bias};
+use crate::util::{random_index_bias, Bias};
 
 pub trait SelectOther<T>: Copy {
     type Output;
