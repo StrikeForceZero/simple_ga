@@ -62,7 +62,7 @@ macro_rules! create_sized_prune_skip_first {
         impl<T> PruneRandom<Vec<T>> for $name {
             /// Will randomly remove a $amount items
             fn prune_random(&self, items: &mut Vec<T>) {
-                let target_size = (items.len() as f64 / $amount).round() as usize;
+                let target_size = (items.len() as f64 * $amount).round() as usize;
                 while items.len() > target_size {
                     match $bias {
                         Bias::Front | Bias::BackInverse => {
@@ -92,7 +92,7 @@ macro_rules! create_sized_prune {
         impl<T> PruneRandom<Vec<T>> for $name {
             /// Will randomly remove a $amount items
             fn prune_random(&self, items: &mut Vec<T>) {
-                let target_size = (items.len() as f64 / $amount).round() as usize;
+                let target_size = (items.len() as f64 * $amount).round() as usize;
                 while items.len() > target_size {
                     match $bias {
                         Bias::Front | Bias::BackInverse => {
