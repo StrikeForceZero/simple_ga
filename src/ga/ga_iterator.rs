@@ -26,7 +26,7 @@ impl<Subject> Default for GaIterOptions<Subject> {
 #[derive(Default)]
 pub struct GaIterState<Subject, Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     pub(crate) context: GaContext<Data>,
     pub(crate) current_fitness: Option<Fitness>,
@@ -36,7 +36,7 @@ where
 
 impl<Subject, Data> GaIterState<Subject, Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     pub fn new(context: GaContext<Data>, population: Population<Subject>) -> Self {
         Self {
@@ -79,7 +79,7 @@ where
 impl<Subject, Data> Debug for GaIterState<Subject, Data>
 where
     Subject: Debug,
-    Data: Debug + Default,
+    Data: Debug + Default + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaIterState")
@@ -94,7 +94,7 @@ where
 pub struct GaIterator<Subject, Actions, Data>
 where
     Actions: GaAction<Data, Subject = Subject>,
-    Data: Default,
+    Data: Default + Clone,
 {
     options: GeneticAlgorithmOptions<Actions, Data>,
     state: GaIterState<Subject, Data>,
@@ -106,7 +106,7 @@ impl<Subject, Actions, Data> GaIterator<Subject, Actions, Data>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     Actions: GaAction<Data, Subject = Subject>,
-    Data: Default,
+    Data: Default + Clone,
 {
     pub fn new(
         options: GeneticAlgorithmOptions<Actions, Data>,
@@ -196,7 +196,7 @@ where
 
         self.options
             .actions
-            .perform_action(&self.state.context, &mut self.state.population);
+            .perform_action(&mut self.state.context, &mut self.state.population);
         self.state.current_fitness
     }
 }

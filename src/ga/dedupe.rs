@@ -49,13 +49,13 @@ impl<Subject, D, Data> GaAction<Data> for DedupeAction<Subject, D>
 where
     // TODO: this is using population for accessing the para iters when feature is parallel but we might be able to make it target Subject generically
     D: DedupeOther<Population<Subject>>,
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject = Subject;
 
     fn perform_action(
         &self,
-        _context: &GaContext<Data>,
+        _context: &mut GaContext<Data>,
         population: &mut Population<Self::Subject>,
     ) {
         self.action.dedupe(population)

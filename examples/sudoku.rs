@@ -391,7 +391,7 @@ enum MutatorFn {
 impl ApplyMutation<EmptyData> for MutatorFn {
     type Subject = WrappedBoard;
 
-    fn apply(&self, context: &GaContext<EmptyData>, subject: &Self::Subject) -> Self::Subject {
+    fn apply(&self, context: &mut GaContext<EmptyData>, subject: &Self::Subject) -> Self::Subject {
         let rng = &mut rng::thread_rng();
         let mut subject = subject.board.clone();
         fn random_cell(
@@ -466,7 +466,7 @@ impl ApplyReproduction<EmptyData> for ReproductionFn {
 
     fn apply(
         &self,
-        context: &GaContext<EmptyData>,
+        context: &mut GaContext<EmptyData>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>> {
@@ -524,31 +524,30 @@ fn main() {
         );
     }
 
-    let create_subject_fn: CreateSubjectFnArc<WrappedBoard, EmptyData> =
-        Arc::new(|ga_context: &GaContext<EmptyData>| {
-            let mut wrapped_board =
-                WrappedBoard::create_spawn(Board::default(), ga_context.generation());
-            let board = &mut wrapped_board.board.0;
-            let rng = &mut rng::thread_rng();
-            if rng.gen_bool(0.1) {
-                for row in board.iter_mut() {
-                    for col in row.iter_mut() {
-                        *col = rng.gen_range(1..=9);
-                    }
-                }
-            } else if rng.gen_bool(0.75) {
-                const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-                for row in board.iter_mut() {
-                    *row = FULL;
-                    if rng.gen_bool(0.5) {
-                        row.rotate_left(rng.gen_range(0..9));
-                    } else {
-                        row.rotate_left(rng.gen_range(0..9));
-                    }
+    fn create_subject_fn(ga_context: &mut GaContext<EmptyData>) -> WrappedBoard {
+        let mut wrapped_board =
+            WrappedBoard::create_spawn(Board::default(), ga_context.generation());
+        let board = &mut wrapped_board.board.0;
+        let rng = &mut rng::thread_rng();
+        if rng.gen_bool(0.1) {
+            for row in board.iter_mut() {
+                for col in row.iter_mut() {
+                    *col = rng.gen_range(1..=9);
                 }
             }
-            wrapped_board
-        });
+        } else if rng.gen_bool(0.75) {
+            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            for row in board.iter_mut() {
+                *row = FULL;
+                if rng.gen_bool(0.5) {
+                    row.rotate_left(rng.gen_range(0..9));
+                } else {
+                    row.rotate_left(rng.gen_range(0..9));
+                }
+            }
+        }
+        wrapped_board
+    }
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,

@@ -21,7 +21,7 @@ type EachGenerationFnOpt<Subject, Data> =
 #[derivative(Debug)]
 pub struct GaRunnerOptions<Subject, Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     #[derivative(Debug = "ignore")]
     pub debug_print: Option<fn(&Subject)>,
@@ -33,7 +33,7 @@ where
 pub struct GaRunner<Subject, Data>
 where
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
-    Data: Default,
+    Data: Default + Clone,
 {
     runner_options: GaRunnerOptions<Subject, Data>,
 }
@@ -41,7 +41,7 @@ where
 impl<Subject, Data> GaRunner<Subject, Data>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
-    Data: Default,
+    Data: Default + Clone,
 {
     pub fn new(runner_options: GaRunnerOptions<Subject, Data>) -> Self {
         Self { runner_options }
@@ -57,16 +57,12 @@ where
         {
             simple_ga_internal_lib::tracing::init_tracing();
         }
-        let mut ga_iter = GaIterator::new_with_options(
-            ga_options,
-            GaIterState::new(
-                GaContext::<Data>::create_from_data(ga_options.initial_data),
-                population,
-            ),
-            GaIterOptions {
-                debug_print: self.runner_options.debug_print,
-            },
-        );
+        let context = GaContext::<Data>::create_from_data(ga_options.initial_data.clone());
+        let state = GaIterState::new(context, population);
+        let options = GaIterOptions {
+            debug_print: self.runner_options.debug_print,
+        };
+        let mut ga_iter = GaIterator::new_with_options(ga_options, state, options);
         while ga_iter.is_fitness_within_range() && !ga_iter.is_fitness_at_target() {
             if let Some(before_each) = self.runner_options.before_each_generation {
                 if let Some(result) = before_each(ga_iter.state_mut()) {
@@ -92,7 +88,7 @@ where
 pub fn ga_runner<
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
     Actions: GaAction<Data, Subject = Subject>,
-    Data: Default,
+    Data: Default + Clone,
 >(
     ga_options: GeneticAlgorithmOptions<Actions, Data>,
     runner_options: GaRunnerOptions<Subject, Data>,

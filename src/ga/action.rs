@@ -15,13 +15,13 @@ pub struct EmptyAction<Subject>(PhantomData<Subject>);
 
 impl<Subject, Data> GaAction<Data> for EmptyAction<Subject>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject = ();
 
     fn perform_action(
         &self,
-        _context: &GaContext<Data>,
+        _context: &mut GaContext<Data>,
         _population: &mut Population<Self::Subject>,
     ) {
         // no op
@@ -81,13 +81,13 @@ where
     Dedupe: DedupeOther<Population<Subject>>,
     Inflator: InflateTarget<Params = GaContext<Data>, Target = Population<Subject>>
         + GaAction<Data, Subject = Subject>,
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject = Subject;
 
     fn perform_action(
         &self,
-        context: &GaContext<Data>,
+        context: &mut GaContext<Data>,
         population: &mut Population<Self::Subject>,
     ) {
         self.prune.perform_action(context, population);

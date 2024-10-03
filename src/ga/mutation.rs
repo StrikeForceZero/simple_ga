@@ -47,10 +47,10 @@ pub struct ApplyMutationOptions<Actions> {
 
 pub trait ApplyMutation<Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject: GaSubject;
-    fn apply(&self, context: &GaContext<Data>, subject: &Self::Subject) -> Self::Subject;
+    fn apply(&self, context: &mut GaContext<Data>, subject: &Self::Subject) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
@@ -58,9 +58,9 @@ pub fn apply_mutations<
     Subject,
     Mutator: ApplyMutation<Data, Subject = Subject>,
     Actions: SampleSelf<Output = Vec<Mutator>>,
-    Data: Default,
+    Data: Default + Clone,
 >(
-    context: &GaContext<Data>,
+    context: &mut GaContext<Data>,
     population: &mut Population<Subject>,
     options: &ApplyMutationOptions<Actions>,
 ) {
@@ -89,13 +89,13 @@ impl<Mutator, Subject, MutatorActions, Data> GaAction<Data>
 where
     Mutator: ApplyMutation<Data, Subject = Subject>,
     MutatorActions: SampleSelf<Output = Vec<Mutator>>,
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject = Subject;
 
     fn perform_action(
         &self,
-        context: &GaContext<Data>,
+        context: &mut GaContext<Data>,
         population: &mut Population<Self::Subject>,
     ) {
         apply_mutations(context, population, &self.options);

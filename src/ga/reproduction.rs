@@ -66,12 +66,12 @@ pub enum ReproductionResult<T> {
 
 pub trait ApplyReproduction<Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject: GaSubject + Hash + PartialEq + Eq;
     fn apply(
         &self,
-        context: &GaContext<Data>,
+        context: &mut GaContext<Data>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>>;
@@ -83,9 +83,9 @@ pub fn apply_reproductions<
     Reproducer: ApplyReproduction<Data, Subject = Subject>,
     Selector: for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
     Actions: SampleSelf<Output = Vec<Reproducer>>,
-    Data: Default,
+    Data: Default + Clone,
 >(
-    context: &GaContext<Data>,
+    context: &mut GaContext<Data>,
     population: &mut Population<Subject>,
     options: &ApplyReproductionOptions<Actions, Selector>,
 ) {
@@ -127,13 +127,13 @@ where
         Output = Vec<&'a FitnessWrapped<Subject>>,
     >,
     ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
-    Data: Default,
+    Data: Default + Clone,
 {
     type Subject = Subject;
 
     fn perform_action(
         &self,
-        context: &GaContext<Data>,
+        context: &mut GaContext<Data>,
         population: &mut Population<Self::Subject>,
     ) {
         apply_reproductions(context, population, &self.options);

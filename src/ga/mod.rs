@@ -41,7 +41,7 @@ pub type CreateSubjectFnBox<Subject, Data> = Box<dyn Fn(&GaContext<Data>) -> Sub
 pub fn create_population_pool<
     Subject: Fit<Fitness>,
     CreateSubjectFn: Deref<Target = dyn Fn(&GaContext<Data>) -> Subject>,
-    Data: Default,
+    Data: Default + Clone,
 >(
     options: CreatePopulationOptions<CreateSubjectFn>,
 ) -> Population<Subject> {
@@ -149,7 +149,7 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 pub struct GeneticAlgorithmOptions<Actions, Data>
 where
     Actions: GaAction<Data>,
-    Data: Default,
+    Data: Default + Clone,
 {
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
@@ -162,7 +162,7 @@ where
 impl<Actions, Data> GeneticAlgorithmOptions<Actions, Data>
 where
     Actions: GaAction<Data>,
-    Data: Default,
+    Data: Default + Clone,
 {
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
@@ -172,16 +172,22 @@ where
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct EmptyData;
+
 #[derive(Default)]
-pub struct GaContext<Data>
+pub struct GaContext<Data = EmptyData>
 where
-    Data: Default,
+// Data: Default + Clone,
 {
     generation: usize,
     pub data: Data,
 }
 
-impl<Data> GaContext<Data> {
+impl<Data> GaContext<Data>
+where
+    Data: Default + Clone,
+{
     pub(crate) fn create_from_data(data: Data) -> Self {
         Self {
             data,
@@ -192,7 +198,7 @@ impl<Data> GaContext<Data> {
 
 impl<Data: Debug> Debug for GaContext<Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaContext")
@@ -204,7 +210,7 @@ where
 
 impl<Data> GaContext<Data>
 where
-    Data: Default,
+    Data: Default + Clone,
 {
     pub fn generation(&self) -> usize {
         self.generation
@@ -214,7 +220,14 @@ where
     }
 }
 
-pub trait GaAction<Data: Default> {
+pub trait GaAction<Data>
+where
+    Data: Default + Clone,
+{
     type Subject;
-    fn perform_action(&self, context: &GaContext<Data>, population: &mut Population<Self::Subject>);
+    fn perform_action(
+        &self,
+        context: &mut GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    );
 }
