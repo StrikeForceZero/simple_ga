@@ -1,5 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, Range};
+use std::rc::Rc;
+use std::sync::Arc;
 use std::usize;
 
 use derivative::Derivative;
@@ -31,6 +33,10 @@ pub struct CreatePopulationOptions<SubjectFn: ?Sized> {
     #[derivative(Debug = "ignore")]
     pub create_subject_fn: SubjectFn,
 }
+
+pub type CreateSubjectFnArc<Subject> = Arc<dyn Fn(&GaContext) -> Subject>;
+pub type CreateSubjectFnRc<Subject> = Rc<dyn Fn(&GaContext) -> Subject>;
+pub type CreateSubjectFnBox<Subject> = Box<dyn Fn(&GaContext) -> Subject>;
 
 pub fn create_population_pool<
     Subject: Fit<Fitness>,
