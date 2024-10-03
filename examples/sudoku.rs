@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
-
 use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::Rng;
+use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 use simple_ga::ga::action::DefaultActions;
@@ -521,29 +521,31 @@ fn main() {
         );
     }
 
-    let create_subject_fn = Box::new(|ga_context: &GaContext| {
-        let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
-        let board = &mut wrapped_board.board.0;
-        let rng = &mut rng::thread_rng();
-        if rng.gen_bool(0.1) {
-            for row in board.iter_mut() {
-                for col in row.iter_mut() {
-                    *col = rng.gen_range(1..=9);
+    let create_subject_fn: Arc<dyn Fn(&GaContext) -> WrappedBoard> =
+        Arc::new(|ga_context: &GaContext| {
+            let mut wrapped_board =
+                WrappedBoard::create_spawn(Board::default(), ga_context.generation);
+            let board = &mut wrapped_board.board.0;
+            let rng = &mut rng::thread_rng();
+            if rng.gen_bool(0.1) {
+                for row in board.iter_mut() {
+                    for col in row.iter_mut() {
+                        *col = rng.gen_range(1..=9);
+                    }
+                }
+            } else if rng.gen_bool(0.75) {
+                const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                for row in board.iter_mut() {
+                    *row = FULL;
+                    if rng.gen_bool(0.5) {
+                        row.rotate_left(rng.gen_range(0..9));
+                    } else {
+                        row.rotate_left(rng.gen_range(0..9));
+                    }
                 }
             }
-        } else if rng.gen_bool(0.75) {
-            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            for row in board.iter_mut() {
-                *row = FULL;
-                if rng.gen_bool(0.5) {
-                    row.rotate_left(rng.gen_range(0..9));
-                } else {
-                    row.rotate_left(rng.gen_range(0..9));
-                }
-            }
-        }
-        wrapped_board
-    });
+            wrapped_board
+        });
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,

@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter};
-
 use lazy_static::lazy_static;
 use rand::Rng;
+use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 use simple_ga::ga::action::DefaultActions;
@@ -237,8 +237,8 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn =
-        Box::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
+    let create_subject_fn: Arc<dyn Fn(&GaContext) -> Subject> =
+        Arc::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: 0f64..target_fitness,
