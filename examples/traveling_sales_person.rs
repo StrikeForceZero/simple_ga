@@ -1,10 +1,10 @@
-use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
-
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
 use rand::Rng;
+use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 use simple_ga::ga::action::DefaultActions;
@@ -276,9 +276,16 @@ fn main() {
         println!("{city:?}");
     }
 
-    let create_subject_fn = Box::new(|_ga_context: &GaContext| Route {
-        cities: shuffled_cities(),
-    });
+    let create_subject_fn: Arc<dyn Fn(&GaContext) -> Route> =
+        Arc::new(move |_ga_context: &GaContext| Route {
+            cities: shuffled_cities(),
+        });
+    let inflate_create_subject_fn = create_subject_fn.clone();
+    let inflate_create_subject_fn: Box<dyn Fn(&GaContext) -> Route> =
+        Box::new(move |ctx: &GaContext| inflate_create_subject_fn(ctx));
+
+    let create_subject_fn: Box<dyn Fn(&GaContext) -> Route> =
+        Box::new(move |ctx: &GaContext| create_subject_fn(ctx));
 
     fn debug_print(subject: &Route) {
         let fitness = subject.measure();
@@ -331,7 +338,7 @@ fn main() {
                     .into()]),
             }),
             dedupe: DedupeAction::<_, EmptyDedupe>::default(),
-            inflate: InflateUntilFull(create_subject_fn.clone()),
+            inflate: InflateUntilFull(inflate_create_subject_fn),
         },
     };
 
