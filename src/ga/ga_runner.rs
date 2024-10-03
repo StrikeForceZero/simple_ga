@@ -59,7 +59,10 @@ where
         }
         let mut ga_iter = GaIterator::new_with_options(
             ga_options,
-            GaIterState::new(GaContext::<Data>::default(), population),
+            GaIterState::new(
+                GaContext::<Data>::create_from_data(ga_options.initial_data),
+                population,
+            ),
             GaIterOptions {
                 debug_print: self.runner_options.debug_print,
             },

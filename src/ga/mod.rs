@@ -181,6 +181,15 @@ where
     pub data: Data,
 }
 
+impl<Data> GaContext<Data> {
+    pub(crate) fn create_from_data(data: Data) -> Self {
+        Self {
+            data,
+            ..Default::default()
+        }
+    }
+}
+
 impl<Data: Debug> Debug for GaContext<Data>
 where
     Data: Default,
