@@ -12,7 +12,7 @@ pub trait InflateTarget {
 }
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct InflateUntilFull<F>(pub F);
+pub struct InflateUntilFull<F: ?Sized>(pub F);
 
 impl<Subject, CreateSubjectFunc> InflateTarget for InflateUntilFull<CreateSubjectFunc>
 where
