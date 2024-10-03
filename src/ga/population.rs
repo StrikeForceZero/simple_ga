@@ -42,6 +42,13 @@ impl<Subject: Display> Display for Population<Subject> {
 }
 
 impl<Subject: Hash + Eq + PartialEq> Population<Subject> {
+    pub fn empty(pool_size: usize) -> Self {
+        Self {
+            pool_size,
+            subjects: Vec::new(),
+        }
+    }
+
     pub fn prune_random<P: PruneRandom<Vec<FitnessWrapped<Subject>>>>(&mut self, pruner: P) {
         pruner.prune_random(&mut self.subjects);
     }
