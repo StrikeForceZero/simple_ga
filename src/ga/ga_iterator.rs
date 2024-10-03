@@ -42,7 +42,7 @@ impl<Subject> GaIterState<Subject> {
     pub fn context(&self) -> &GaContext {
         &self.context
     }
-    pub(crate) fn get_or_determine_reverse_mode_from_options<Actions>(
+    pub(crate) fn get_or_determine_reverse_mode_from_options<Actions: GaAction>(
         &self,
         options: &GeneticAlgorithmOptions<Actions>,
     ) -> bool {
@@ -52,7 +52,7 @@ impl<Subject> GaIterState<Subject> {
             options.initial_fitness() < options.target_fitness()
         }
     }
-    pub(crate) fn get_or_init_reverse_mode_enabled<Actions>(
+    pub(crate) fn get_or_init_reverse_mode_enabled<Actions: GaAction>(
         &mut self,
         options: &GeneticAlgorithmOptions<Actions>,
     ) -> bool {
@@ -80,7 +80,10 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<Subject, Actions> {
+pub struct GaIterator<Subject, Actions>
+where
+    Actions: GaAction<Subject = Subject>,
+{
     options: GeneticAlgorithmOptions<Actions>,
     state: GaIterState<Subject>,
     is_reverse_mode: bool,

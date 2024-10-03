@@ -136,7 +136,10 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<Actions> {
+pub struct GeneticAlgorithmOptions<Actions>
+where
+    Actions: GaAction,
+{
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
@@ -144,7 +147,10 @@ pub struct GeneticAlgorithmOptions<Actions> {
     pub actions: Actions,
 }
 
-impl<Actions> GeneticAlgorithmOptions<Actions> {
+impl<Actions> GeneticAlgorithmOptions<Actions>
+where
+    Actions: GaAction,
+{
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
     }
