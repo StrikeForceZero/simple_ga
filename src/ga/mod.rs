@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use std::ops::Range;
+use std::ops::{Deref, Range};
 use std::usize;
 
 use derivative::Derivative;
@@ -26,14 +26,17 @@ pub mod subject;
 
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
-pub struct CreatePopulationOptions<SubjectFn> {
+pub struct CreatePopulationOptions<SubjectFn: ?Sized> {
     pub population_size: usize,
     #[derivative(Debug = "ignore")]
     pub create_subject_fn: SubjectFn,
 }
 
-pub fn create_population_pool<Subject: Fit<Fitness>>(
-    options: CreatePopulationOptions<impl Fn(&GaContext) -> Subject>,
+pub fn create_population_pool<
+    Subject: Fit<Fitness>,
+    CreateSubjectFn: Deref<Target = dyn Fn(&GaContext) -> Subject>,
+>(
+    options: CreatePopulationOptions<CreateSubjectFn>,
 ) -> Population<Subject> {
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
     let mut context = GaContext::default();

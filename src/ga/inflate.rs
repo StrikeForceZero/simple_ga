@@ -1,9 +1,9 @@
-use std::hash::Hash;
-
 use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
 use crate::ga::{GaAction, GaContext};
+use std::hash::Hash;
+use std::ops::Deref;
 
 pub trait InflateTarget {
     type Params;
@@ -14,9 +14,10 @@ pub trait InflateTarget {
 #[derive(Debug, Copy, Clone, Default)]
 pub struct InflateUntilFull<CreateSubjectFunc: ?Sized>(pub CreateSubjectFunc);
 
-impl<Subject> InflateTarget for InflateUntilFull<Box<dyn Fn(&GaContext) -> Subject>>
+impl<Subject, CreateSubjectFunc> InflateTarget for InflateUntilFull<CreateSubjectFunc>
 where
     Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
+    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext) -> Subject>,
 {
     type Params = GaContext;
     type Target = Population<Subject>;
@@ -29,9 +30,10 @@ where
     }
 }
 
-impl<Subject> GaAction for InflateUntilFull<Box<dyn Fn(&GaContext) -> Subject>>
+impl<Subject, CreateSubjectFunc> GaAction for InflateUntilFull<CreateSubjectFunc>
 where
     Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
+    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext) -> Subject>,
 {
     type Subject = Subject;
 
