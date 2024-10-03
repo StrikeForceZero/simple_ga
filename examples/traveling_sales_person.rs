@@ -21,8 +21,8 @@ use simple_ga::ga::reproduction::{
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
-    WeightedActionsSampleOne,
+    create_population_pool, CreatePopulationOptions, CreateSubjectFnArc, GaContext,
+    GeneticAlgorithmOptions, WeightedActionsSampleOne,
 };
 use simple_ga::util::Bias;
 
@@ -276,7 +276,7 @@ fn main() {
         println!("{city:?}");
     }
 
-    let create_subject_fn: Arc<dyn Fn(&GaContext) -> Route> =
+    let create_subject_fn: CreateSubjectFnArc<Route> =
         Arc::new(move |_ga_context: &GaContext| Route {
             cities: shuffled_cities(),
         });

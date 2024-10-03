@@ -18,8 +18,8 @@ use simple_ga::ga::reproduction::{
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
-    WeightedActionsSampleOne,
+    create_population_pool, CreatePopulationOptions, CreateSubjectFnArc, GaContext,
+    GeneticAlgorithmOptions, WeightedActionsSampleOne,
 };
 use simple_ga::util::{rng, ApplyRatioFloat64, Bias};
 
@@ -237,7 +237,7 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn: Arc<dyn Fn(&GaContext) -> Subject> =
+    let create_subject_fn: CreateSubjectFnArc<Subject> =
         Arc::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
 
     let ga_options = GeneticAlgorithmOptions {
