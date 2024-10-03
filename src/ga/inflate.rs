@@ -3,42 +3,67 @@ use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
 use crate::ga::{GaAction, GaContext};
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 pub trait InflateTarget {
     type Params;
     type Target;
-    fn inflate(&self, params: &Self::Params, target: &mut Self::Target);
+    type Data;
+    fn inflate(&self, params: &Self::Params, target: &mut Self::Target, data: &mut Self::Data);
 }
 
 #[derive(Debug, Copy, Clone, Default)]
-pub struct InflateUntilFull<CreateSubjectFunc: ?Sized>(pub CreateSubjectFunc);
+pub struct InflateUntilFull<Subject, CreateSubjectFunc, Data> {
+    create_subject_fn: CreateSubjectFunc,
+    _subject_marker: PhantomData<Subject>,
+    _data_marker: PhantomData<Data>,
+}
 
-impl<Subject, CreateSubjectFunc> InflateTarget for InflateUntilFull<CreateSubjectFunc>
-where
-    Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
-    CreateSubjectFunc: Fn(&GaContext) -> Subject,
-{
-    type Params = GaContext;
-    type Target = Population<Subject>;
-    fn inflate(&self, params: &Self::Params, target: &mut Self::Target) {
-        while target.subjects.len() < target.pool_size {
-            // TODO: re-add warning if fitness = target fitness
-            // this would require GeneticAlgorithmOptions to be passed in
-            target.add(self.0(params).into());
+impl<Subject, CreateSubjectFunc, Data> InflateUntilFull<Subject, CreateSubjectFunc, Data> {
+    pub fn new(create_subject_fn: CreateSubjectFunc) -> Self {
+        Self {
+            create_subject_fn,
+            _subject_marker: PhantomData,
+            _data_marker: PhantomData,
         }
     }
 }
 
-impl<Subject, CreateSubjectFunc> GaAction for InflateUntilFull<CreateSubjectFunc>
+impl<Subject, CreateSubjectFunc, Data> InflateTarget
+    for InflateUntilFull<Subject, CreateSubjectFunc, Data>
 where
     Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
-    CreateSubjectFunc: Fn(&GaContext) -> Subject,
+    CreateSubjectFunc: Fn(&GaContext, &mut Data) -> Subject,
+{
+    type Params = GaContext;
+    type Target = Population<Subject>;
+    type Data = Data;
+    fn inflate(&self, params: &Self::Params, target: &mut Self::Target, data: &mut Self::Data) {
+        while target.subjects.len() < target.pool_size {
+            // TODO: re-add warning if fitness = target fitness
+            // this would require GeneticAlgorithmOptions to be passed in
+            target.add((self.create_subject_fn)(params, data).into());
+        }
+    }
+}
+
+impl<Subject, CreateSubjectFunc, Data> GaAction
+    for InflateUntilFull<Subject, CreateSubjectFunc, Data>
+where
+    Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
+    CreateSubjectFunc: Fn(&GaContext, &mut Data) -> Subject,
 {
     type Subject = Subject;
+    type Data = Data;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
-        self.inflate(context, population);
+    fn perform_action(
+        &self,
+        context: &GaContext,
+        population: &mut Population<Self::Subject>,
+        data: &mut Self::Data,
+    ) {
+        self.inflate(context, population, data);
     }
 }
 

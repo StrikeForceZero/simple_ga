@@ -18,8 +18,8 @@ use simple_ga::ga::reproduction::{
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, CreateSubjectFnArc, GaContext,
-    GeneticAlgorithmOptions, WeightedActionsSampleOne,
+    create_population_pool, CreatePopulationOptions, EmptyData, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::util::{rng, ApplyRatioFloat64, Bias};
 
@@ -521,7 +521,7 @@ fn main() {
         );
     }
 
-    let create_subject_fn: CreateSubjectFnArc<WrappedBoard> = Arc::new(|ga_context: &GaContext| {
+    fn create_subject_fn(ga_context: &GaContext, _data: &mut EmptyData) -> WrappedBoard {
         let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
         let board = &mut wrapped_board.board.0;
         let rng = &mut rng::thread_rng();
@@ -543,7 +543,15 @@ fn main() {
             }
         }
         wrapped_board
-    });
+    }
+
+    let population = create_population_pool(
+        CreatePopulationOptions {
+            population_size,
+            create_subject_fn,
+        },
+        &mut EmptyData,
+    );
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
@@ -571,8 +579,9 @@ fn main() {
                     .into()]),
             }),
             dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
-            inflate: InflateUntilFull(create_subject_fn.clone()),
+            inflate: InflateUntilFull::new(create_subject_fn),
         },
+        initial_data: Some(EmptyData),
     };
 
     let ga_runner_options = GaRunnerOptions {
@@ -588,11 +597,6 @@ fn main() {
         }),
         ..Default::default()
     };
-
-    let population = create_population_pool(CreatePopulationOptions {
-        population_size,
-        create_subject_fn,
-    });
 
     info!("starting generation loop");
     ga_runner(ga_options, ga_runner_options, population);

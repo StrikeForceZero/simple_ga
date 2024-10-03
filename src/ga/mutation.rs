@@ -86,8 +86,14 @@ where
     MutatorActions: SampleSelf<Output = Vec<Mutator>>,
 {
     type Subject = Subject;
+    type Data = ();
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        context: &GaContext,
+        population: &mut Population<Self::Subject>,
+        _data: &mut Self::Data,
+    ) {
         apply_mutations(context, population, &self.options);
     }
 }

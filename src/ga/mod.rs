@@ -1,16 +1,13 @@
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, Range};
-use std::rc::Rc;
-use std::sync::Arc;
 use std::usize;
-
-use derivative::Derivative;
-use rand::distributions::WeightedIndex;
-use rand::prelude::Distribution;
 
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::util::{coin_flip, rng, Odds};
+use derivative::Derivative;
+use rand::distributions::WeightedIndex;
+use rand::prelude::Distribution;
 
 pub mod action;
 pub mod dedupe;
@@ -28,26 +25,24 @@ pub mod subject;
 
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
-pub struct CreatePopulationOptions<SubjectFn: ?Sized> {
+pub struct CreatePopulationOptions<SubjectFn> {
     pub population_size: usize,
     #[derivative(Debug = "ignore")]
     pub create_subject_fn: SubjectFn,
 }
 
-pub type CreateSubjectFnArc<Subject> = Arc<dyn Fn(&GaContext) -> Subject>;
-pub type CreateSubjectFnRc<Subject> = Rc<dyn Fn(&GaContext) -> Subject>;
-pub type CreateSubjectFnBox<Subject> = Box<dyn Fn(&GaContext) -> Subject>;
-
-pub fn create_population_pool<
-    Subject: Fit<Fitness>,
-    CreateSubjectFn: Deref<Target = dyn Fn(&GaContext) -> Subject>,
->(
+pub fn create_population_pool<Subject, CreateSubjectFn, Data>(
     options: CreatePopulationOptions<CreateSubjectFn>,
-) -> Population<Subject> {
+    data: &mut Data,
+) -> Population<Subject>
+where
+    Subject: Fit<Fitness>,
+    CreateSubjectFn: for<'a> Fn(&GaContext, &'a mut Data) -> Subject,
+{
     let mut subjects: Vec<FitnessWrapped<Subject>> = vec![];
-    let mut context = GaContext::default();
+    let context = GaContext::default();
     for _ in 0..options.population_size {
-        let subject = (options.create_subject_fn)(&mut context);
+        let subject = (options.create_subject_fn)(&context, data);
         subjects.push(FitnessWrapped::from(subject));
     }
     Population {
@@ -143,22 +138,26 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
     }
 }
 
+#[derive(Debug, Default, Copy, Clone)]
+pub struct EmptyData;
+
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<Actions>
+pub struct GeneticAlgorithmOptions<Actions, Data = EmptyData>
 where
-    Actions: GaAction,
+    Actions: GaAction<Data = Data>,
 {
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
     pub actions: Actions,
+    pub initial_data: Option<Data>,
 }
 
-impl<Actions> GeneticAlgorithmOptions<Actions>
+impl<Actions, Data> GeneticAlgorithmOptions<Actions, Data>
 where
-    Actions: GaAction,
+    Actions: GaAction<Data = Data>,
 {
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
@@ -181,5 +180,11 @@ impl GaContext {
 
 pub trait GaAction {
     type Subject;
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>);
+    type Data;
+    fn perform_action(
+        &self,
+        context: &GaContext,
+        population: &mut Population<Self::Subject>,
+        data: &mut Self::Data,
+    );
 }

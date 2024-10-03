@@ -34,8 +34,14 @@ where
     P: PruneOther<Vec<FitnessWrapped<Subject>>>,
 {
     type Subject = Subject;
+    type Data = ();
 
-    fn perform_action(&self, _context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        _context: &GaContext,
+        population: &mut Population<Self::Subject>,
+        _data: &mut Self::Data,
+    ) {
         self.action.prune(&mut population.subjects);
     }
 }

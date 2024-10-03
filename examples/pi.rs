@@ -18,8 +18,8 @@ use simple_ga::ga::reproduction::{
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, CreateSubjectFnArc, GaContext,
-    GeneticAlgorithmOptions, WeightedActionsSampleOne,
+    create_population_pool, CreatePopulationOptions, EmptyData, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::util::{rng, ApplyRatioFloat64, Bias};
 
@@ -237,8 +237,17 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn: CreateSubjectFnArc<Subject> =
-        Arc::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
+    fn create_subject_fn(_context: &GaContext, _data: &mut EmptyData) -> Subject {
+        random_f64(&mut rng::thread_rng()).into()
+    };
+
+    let population = create_population_pool(
+        CreatePopulationOptions {
+            population_size,
+            create_subject_fn,
+        },
+        &mut EmptyData,
+    );
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: 0f64..target_fitness,
@@ -272,10 +281,11 @@ fn main() {
                 ]),
             }),
             dedupe: DedupeAction::new(EmptyDedupe),
-            inflate: InflateUntilFull(create_subject_fn.clone()),
+            inflate: InflateUntilFull::new(create_subject_fn),
             // TODO: fix default
             // ..Default::default()
         },
+        initial_data: Some(EmptyData),
     };
 
     let ga_runner_options = GaRunnerOptions {
@@ -291,11 +301,6 @@ fn main() {
         }),
         ..Default::default()
     };
-
-    let population = create_population_pool(CreatePopulationOptions {
-        population_size,
-        create_subject_fn,
-    });
 
     info!("starting generation loop");
     ga_runner(ga_options, ga_runner_options, population);

@@ -6,7 +6,7 @@ use crate::ga::fitness::{Fit, Fitness};
 use crate::ga::ga_iterator::{GaIterOptions, GaIterState, GaIterator};
 use crate::ga::population::Population;
 use crate::ga::subject::GaSubject;
-use crate::ga::{GaAction, GaContext, GeneticAlgorithmOptions};
+use crate::ga::{EmptyData, GaAction, GaContext, GeneticAlgorithmOptions};
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum GaRunnerCustomForEachGenerationResult {
@@ -14,50 +14,54 @@ pub enum GaRunnerCustomForEachGenerationResult {
 }
 
 // TODO: should this be GaIterator? at the expense of requiring the generics to be known at GaRunner construction
-type EachGenerationFnOpt<Subject> =
-    Option<fn(&mut GaIterState<Subject>) -> Option<GaRunnerCustomForEachGenerationResult>>;
+type EachGenerationFnOpt<Subject, Data> =
+    Option<fn(&mut GaIterState<Subject, Data>) -> Option<GaRunnerCustomForEachGenerationResult>>;
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GaRunnerOptions<Subject> {
+pub struct GaRunnerOptions<Subject, Data> {
     #[derivative(Debug = "ignore")]
     pub debug_print: Option<fn(&Subject)>,
-    pub before_each_generation: EachGenerationFnOpt<Subject>,
-    pub after_each_generation: EachGenerationFnOpt<Subject>,
+    pub before_each_generation: EachGenerationFnOpt<Subject, Data>,
+    pub after_each_generation: EachGenerationFnOpt<Subject, Data>,
 }
 
-pub struct GaRunner<Subject>
+pub struct GaRunner<Subject, Data = EmptyData>
 where
     Subject: Fit<Fitness> + Hash + PartialEq + Eq,
 {
-    runner_options: GaRunnerOptions<Subject>,
+    runner_options: GaRunnerOptions<Subject, Data>,
 }
 
-impl<Subject> GaRunner<Subject>
+impl<Subject, Data> GaRunner<Subject, Data>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
+    Data: Default + Clone,
 {
-    pub fn new(runner_options: GaRunnerOptions<Subject>) -> Self {
+    pub fn new(runner_options: GaRunnerOptions<Subject, Data>) -> Self {
         Self { runner_options }
     }
     pub fn run<Actions>(
         &mut self,
-        ga_options: GeneticAlgorithmOptions<Actions>,
+        ga_options: GeneticAlgorithmOptions<Actions, Data>,
         population: Population<Subject>,
     ) where
-        Actions: GaAction<Subject = Subject>,
+        Actions: GaAction<Subject = Subject, Data = Data>,
     {
         #[cfg(test)]
         {
             simple_ga_internal_lib::tracing::init_tracing();
         }
-        let mut ga_iter = GaIterator::new_with_options(
-            ga_options,
-            GaIterState::new(GaContext::default(), population),
-            GaIterOptions {
-                debug_print: self.runner_options.debug_print,
-            },
-        );
+        let data = ga_options
+            .initial_data
+            .as_ref()
+            .cloned()
+            .unwrap_or_default();
+        let state = GaIterState::new(GaContext::default(), population, data);
+        let options = GaIterOptions {
+            debug_print: self.runner_options.debug_print,
+        };
+        let mut ga_iter = GaIterator::new_with_options(ga_options, state, options);
         while ga_iter.is_fitness_within_range() && !ga_iter.is_fitness_at_target() {
             if let Some(before_each) = self.runner_options.before_each_generation {
                 if let Some(result) = before_each(ga_iter.state_mut()) {
@@ -82,10 +86,11 @@ where
 
 pub fn ga_runner<
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
-    Actions: GaAction<Subject = Subject>,
+    Actions: GaAction<Subject = Subject, Data = Data>,
+    Data: Default + Clone,
 >(
-    ga_options: GeneticAlgorithmOptions<Actions>,
-    runner_options: GaRunnerOptions<Subject>,
+    ga_options: GeneticAlgorithmOptions<Actions, Data>,
+    runner_options: GaRunnerOptions<Subject, Data>,
     population: Population<Subject>,
 ) {
     GaRunner::new(runner_options).run(ga_options, population);

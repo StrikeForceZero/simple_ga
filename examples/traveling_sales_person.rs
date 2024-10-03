@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use rand::prelude::SliceRandom;
+use rand::prelude::{IteratorRandom, SliceRandom};
 use rand::Rng;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -21,8 +21,8 @@ use simple_ga::ga::reproduction::{
 use simple_ga::ga::select::SelectRandomManyWithBias;
 use simple_ga::ga::subject::GaSubject;
 use simple_ga::ga::{
-    create_population_pool, CreatePopulationOptions, CreateSubjectFnArc, GaContext,
-    GeneticAlgorithmOptions, WeightedActionsSampleOne,
+    create_population_pool, CreatePopulationOptions, GaContext, GeneticAlgorithmOptions,
+    WeightedActionsSampleOne,
 };
 use simple_ga::util::Bias;
 
@@ -36,7 +36,7 @@ impl SizeHintCollapse for (usize, Option<usize>) {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 struct City {
     id: usize,
     x: f64,
@@ -81,7 +81,7 @@ impl Display for Route {
 
 #[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
 struct Route {
-    cities: Vec<&'static City>,
+    cities: Vec<City>,
 }
 
 impl Route {
@@ -94,7 +94,7 @@ impl Route {
         };
         self.cities
             .windows(2)
-            .map(|pair| pair[0].distance_to(pair[1]))
+            .map(|pair| pair[0].distance_to(&pair[1]))
             .sum::<f64>()
             + last_city.distance_to(first_city)
     }
@@ -259,27 +259,32 @@ const MAX_FITNESS: Fitness = Fitness::MAX;
 const MIN_FITNESS: Fitness = 0.0;
 const NUM_CITIES: usize = 12;
 
+#[derive(Debug, Clone, Default)]
+struct Data {
+    cities: Vec<City>,
+}
+
 fn main() {
     let population_size = 1000;
     simple_ga_internal_lib::tracing::init_tracing();
 
-    lazy_static! {
-        static ref CITIES: Vec<City> = generate_cities(NUM_CITIES, 100.0, 100.0);
-    }
-    let shuffled_cities = || {
-        CITIES
-            .choose_multiple(&mut simple_ga::util::rng::thread_rng(), CITIES.len())
-            .collect()
+    let mut data = Data {
+        cities: generate_cities(NUM_CITIES, 100.0, 100.0),
     };
 
-    for city in CITIES.iter() {
+    for city in data.cities.iter() {
         println!("{city:?}");
     }
 
-    let create_subject_fn: CreateSubjectFnArc<Route> =
-        Arc::new(move |_ga_context: &GaContext| Route {
-            cities: shuffled_cities(),
-        });
+    fn create_subject_fn(_ga_context: &GaContext, data: &mut Data) -> Route {
+        let cities_count = data.cities.len();
+        let cities: Vec<City> = data
+            .cities
+            .choose_multiple(&mut simple_ga::util::rng::thread_rng(), cities_count)
+            .cloned()
+            .collect();
+        Route { cities }
+    }
 
     fn debug_print(subject: &Route) {
         let fitness = subject.measure();
@@ -288,7 +293,7 @@ fn main() {
     }
 
     fn check_if_best(
-        iter_state: &mut GaIterState<Route>,
+        iter_state: &mut GaIterState<Route, Data>,
     ) -> Option<GaRunnerCustomForEachGenerationResult> {
         if iter_state.context().generation == 0 {
             return None;
@@ -312,6 +317,14 @@ fn main() {
         None
     }
 
+    let population = create_population_pool(
+        CreatePopulationOptions {
+            population_size,
+            create_subject_fn,
+        },
+        &mut data,
+    );
+
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: INITIAL_FITNESS..TARGET_FITNESS,
         fitness_range: MIN_FITNESS..MAX_FITNESS,
@@ -332,8 +345,9 @@ fn main() {
                     .into()]),
             }),
             dedupe: DedupeAction::<_, EmptyDedupe>::default(),
-            inflate: InflateUntilFull(create_subject_fn.clone()),
+            inflate: InflateUntilFull::new(create_subject_fn),
         },
+        initial_data: Some(data),
     };
 
     let ga_runner_options = GaRunnerOptions {
@@ -341,11 +355,6 @@ fn main() {
         before_each_generation: Some(check_if_best),
         ..Default::default()
     };
-
-    let population = create_population_pool(CreatePopulationOptions {
-        population_size,
-        create_subject_fn,
-    });
 
     info!("starting generation loop");
     ga_runner(ga_options, ga_runner_options, population);

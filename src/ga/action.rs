@@ -15,8 +15,14 @@ pub struct EmptyAction<Subject>(PhantomData<Subject>);
 
 impl<Subject> GaAction for EmptyAction<Subject> {
     type Subject = ();
+    type Data = ();
 
-    fn perform_action(&self, _context: &GaContext, _population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        _context: &GaContext,
+        _population: &mut Population<Self::Subject>,
+        _data: &mut Self::Data,
+    ) {
         // no op
     }
 }
@@ -50,6 +56,7 @@ impl<
         Reproducer,
         Dedupe,
         Inflator,
+        Data,
     > GaAction
     for DefaultActions<
         Subject,
@@ -71,17 +78,29 @@ where
     Reproducer: ApplyReproduction<Subject = Subject>,
     ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
     Dedupe: DedupeOther<Population<Subject>>,
-    Inflator: InflateTarget<Params = GaContext, Target = Population<Subject>>
-        + GaAction<Subject = Subject>,
+    Inflator: InflateTarget<Params = GaContext, Target = Population<Subject>, Data = Data>
+        + GaAction<Subject = Subject, Data = Data>,
 {
     type Subject = Subject;
+    type Data = Data;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
-        self.prune.perform_action(context, population);
-        self.mutation.perform_action(context, population);
-        self.reproduction.perform_action(context, population);
-        self.dedupe.perform_action(context, population);
-        self.inflate.perform_action(context, population);
+    fn perform_action(
+        &self,
+        context: &GaContext,
+        population: &mut Population<Self::Subject>,
+        data: &mut Self::Data,
+    ) {
+        {
+            // TODO: finish implementing passing data down
+            let mut no_data = ();
+            let data = &mut no_data;
+            self.prune.perform_action(context, population, data);
+            self.mutation.perform_action(context, population, data);
+            self.reproduction.perform_action(context, population, data);
+            self.dedupe.perform_action(context, population, data);
+        }
+
+        self.inflate.perform_action(context, population, data);
     }
 }
 
