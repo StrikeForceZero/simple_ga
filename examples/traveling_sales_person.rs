@@ -170,15 +170,19 @@ fn generate_cities(num_cities: usize, width: f64, height: f64) -> Vec<City> {
         .collect()
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 enum Mutation {
+    #[default]
     Swap,
 }
 
-impl ApplyMutation for Mutation {
+impl<Data> ApplyMutation<Data> for Mutation
+where
+    Data: Default,
+{
     type Subject = Route;
 
-    fn apply(&self, _context: &GaContext, subject: &Self::Subject) -> Self::Subject {
+    fn apply(&self, _context: &GaContext<Data>, subject: &Self::Subject) -> Self::Subject {
         let rng = &mut simple_ga::util::rng::thread_rng();
         let mut subject = subject.clone();
         match self {
@@ -200,17 +204,21 @@ impl ApplyMutation for Mutation {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 enum Reproduction {
+    #[default]
     Reproduce,
 }
 
-impl ApplyReproduction for Reproduction {
+impl<Data> ApplyReproduction<Data> for Reproduction
+where
+    Data: Default,
+{
     type Subject = Route;
 
     fn apply(
         &self,
-        _context: &GaContext,
+        _context: &GaContext<Data>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>> {
@@ -259,6 +267,9 @@ const MAX_FITNESS: Fitness = Fitness::MAX;
 const MIN_FITNESS: Fitness = 0.0;
 const NUM_CITIES: usize = 12;
 
+#[derive(Debug, Clone, Default)]
+struct EmptyData;
+
 fn main() {
     let population_size = 1000;
     simple_ga_internal_lib::tracing::init_tracing();
@@ -276,8 +287,8 @@ fn main() {
         println!("{city:?}");
     }
 
-    let create_subject_fn: CreateSubjectFnArc<Route> =
-        Arc::new(move |_ga_context: &GaContext| Route {
+    let create_subject_fn: CreateSubjectFnArc<Route, EmptyData> =
+        Arc::new(move |_ga_context: &GaContext<EmptyData>| Route {
             cities: shuffled_cities(),
         });
 
@@ -288,15 +299,15 @@ fn main() {
     }
 
     fn check_if_best(
-        iter_state: &mut GaIterState<Route>,
+        iter_state: &mut GaIterState<Route, EmptyData>,
     ) -> Option<GaRunnerCustomForEachGenerationResult> {
-        if iter_state.context().generation == 0 {
+        if iter_state.context().generation() == 0 {
             return None;
         }
-        if iter_state.context().generation % 100000 != 0 {
+        if iter_state.context().generation() % 100000 != 0 {
             return None;
         }
-        info!("generation: {}", iter_state.context().generation);
+        info!("generation: {}", iter_state.context().generation());
         let best_subject = iter_state.population.subjects.first()?;
         debug!("checking if best subject is the best possible route...");
         let (is_best_route, better_route_opt) =
@@ -334,6 +345,7 @@ fn main() {
             dedupe: DedupeAction::<_, EmptyDedupe>::default(),
             inflate: InflateUntilFull(create_subject_fn.clone()),
         },
+        initial_data: EmptyData,
     };
 
     let ga_runner_options = GaRunnerOptions {

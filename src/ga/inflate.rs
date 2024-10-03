@@ -14,12 +14,13 @@ pub trait InflateTarget {
 #[derive(Debug, Copy, Clone, Default)]
 pub struct InflateUntilFull<CreateSubjectFunc: ?Sized>(pub CreateSubjectFunc);
 
-impl<Subject, CreateSubjectFunc> InflateTarget for InflateUntilFull<CreateSubjectFunc>
+impl<Subject, CreateSubjectFunc, Data> InflateTarget for InflateUntilFull<CreateSubjectFunc>
 where
     Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
-    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext) -> Subject>,
+    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext<Data>) -> Subject>,
+    Data: Default,
 {
-    type Params = GaContext;
+    type Params = GaContext<Data>;
     type Target = Population<Subject>;
     fn inflate(&self, params: &Self::Params, target: &mut Self::Target) {
         while target.subjects.len() < target.pool_size {
@@ -30,14 +31,19 @@ where
     }
 }
 
-impl<Subject, CreateSubjectFunc> GaAction for InflateUntilFull<CreateSubjectFunc>
+impl<Subject, CreateSubjectFunc, Data> GaAction<Data> for InflateUntilFull<CreateSubjectFunc>
 where
     Subject: GaSubject + Hash + Eq + PartialEq + Fit<Fitness>,
-    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext) -> Subject>,
+    CreateSubjectFunc: Deref<Target = dyn Fn(&GaContext<Data>) -> Subject>,
+    Data: Default,
 {
     type Subject = Subject;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        context: &GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    ) {
         self.inflate(context, population);
     }
 }

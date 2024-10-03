@@ -1,16 +1,16 @@
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, Range};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::usize;
 
-use derivative::Derivative;
-use rand::distributions::WeightedIndex;
-use rand::prelude::Distribution;
-
 use crate::ga::fitness::{Fit, Fitness, FitnessWrapped};
 use crate::ga::population::Population;
 use crate::util::{coin_flip, rng, Odds};
+use derivative::Derivative;
+use rand::distributions::WeightedIndex;
+use rand::prelude::Distribution;
 
 pub mod action;
 pub mod dedupe;
@@ -34,13 +34,14 @@ pub struct CreatePopulationOptions<SubjectFn: ?Sized> {
     pub create_subject_fn: SubjectFn,
 }
 
-pub type CreateSubjectFnArc<Subject> = Arc<dyn Fn(&GaContext) -> Subject>;
-pub type CreateSubjectFnRc<Subject> = Rc<dyn Fn(&GaContext) -> Subject>;
-pub type CreateSubjectFnBox<Subject> = Box<dyn Fn(&GaContext) -> Subject>;
+pub type CreateSubjectFnArc<Subject, Data> = Arc<dyn Fn(&GaContext<Data>) -> Subject>;
+pub type CreateSubjectFnRc<Subject, Data> = Rc<dyn Fn(&GaContext<Data>) -> Subject>;
+pub type CreateSubjectFnBox<Subject, Data> = Box<dyn Fn(&GaContext<Data>) -> Subject>;
 
 pub fn create_population_pool<
     Subject: Fit<Fitness>,
-    CreateSubjectFn: Deref<Target = dyn Fn(&GaContext) -> Subject>,
+    CreateSubjectFn: Deref<Target = dyn Fn(&GaContext<Data>) -> Subject>,
+    Data: Default,
 >(
     options: CreatePopulationOptions<CreateSubjectFn>,
 ) -> Population<Subject> {
@@ -145,20 +146,23 @@ impl<Action> From<(Action, Odds)> for WeightedAction<Action> {
 
 #[derive(Derivative, Clone, Default)]
 #[derivative(Debug)]
-pub struct GeneticAlgorithmOptions<Actions>
+pub struct GeneticAlgorithmOptions<Actions, Data>
 where
-    Actions: GaAction,
+    Actions: GaAction<Data>,
+    Data: Default,
 {
     /// initial fitness to target fitness
     pub fitness_initial_to_target_range: Range<Fitness>,
     /// min and max fitness range to terminate the loop
     pub fitness_range: Range<Fitness>,
     pub actions: Actions,
+    pub initial_data: Data,
 }
 
-impl<Actions> GeneticAlgorithmOptions<Actions>
+impl<Actions, Data> GeneticAlgorithmOptions<Actions, Data>
 where
-    Actions: GaAction,
+    Actions: GaAction<Data>,
+    Data: Default,
 {
     pub fn initial_fitness(&self) -> Fitness {
         self.fitness_initial_to_target_range.start
@@ -168,12 +172,40 @@ where
     }
 }
 
-#[derive(Debug, Default)]
-pub struct GaContext {
-    pub generation: usize,
+#[derive(Default)]
+pub struct GaContext<Data>
+where
+    Data: Default,
+{
+    generation: usize,
+    pub data: Data,
 }
 
-pub trait GaAction {
+impl<Data: Debug> Debug for GaContext<Data>
+where
+    Data: Default,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GaContext")
+            .field("generation", &self.generation)
+            .field("data", &self.data)
+            .finish()
+    }
+}
+
+impl<Data> GaContext<Data>
+where
+    Data: Default,
+{
+    pub fn generation(&self) -> usize {
+        self.generation
+    }
+    pub(crate) fn increment_generation(&mut self) {
+        self.generation += 1;
+    }
+}
+
+pub trait GaAction<Data: Default> {
     type Subject;
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>);
+    fn perform_action(&self, context: &GaContext<Data>, population: &mut Population<Self::Subject>);
 }

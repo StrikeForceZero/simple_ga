@@ -13,10 +13,17 @@ use crate::ga::{GaAction, GaContext, SampleSelf};
 #[derive(Debug, Default, Copy, Clone)]
 pub struct EmptyAction<Subject>(PhantomData<Subject>);
 
-impl<Subject> GaAction for EmptyAction<Subject> {
+impl<Subject, Data> GaAction<Data> for EmptyAction<Subject>
+where
+    Data: Default,
+{
     type Subject = ();
 
-    fn perform_action(&self, _context: &GaContext, _population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        _context: &GaContext<Data>,
+        _population: &mut Population<Self::Subject>,
+    ) {
         // no op
     }
 }
@@ -50,7 +57,8 @@ impl<
         Reproducer,
         Dedupe,
         Inflator,
-    > GaAction
+        Data,
+    > GaAction<Data>
     for DefaultActions<
         Subject,
         Pruner,
@@ -64,19 +72,24 @@ impl<
     >
 where
     Pruner: PruneOther<Vec<FitnessWrapped<Subject>>>,
-    Mutator: ApplyMutation<Subject = Subject>,
+    Mutator: ApplyMutation<Data, Subject = Subject>,
     MutatorActions: SampleSelf<Output = Vec<Mutator>>,
     Selector:
         for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
-    Reproducer: ApplyReproduction<Subject = Subject>,
+    Reproducer: ApplyReproduction<Data, Subject = Subject>,
     ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
     Dedupe: DedupeOther<Population<Subject>>,
-    Inflator: InflateTarget<Params = GaContext, Target = Population<Subject>>
-        + GaAction<Subject = Subject>,
+    Inflator: InflateTarget<Params = GaContext<Data>, Target = Population<Subject>>
+        + GaAction<Data, Subject = Subject>,
+    Data: Default,
 {
     type Subject = Subject;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        context: &GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    ) {
         self.prune.perform_action(context, population);
         self.mutation.perform_action(context, population);
         self.reproduction.perform_action(context, population);

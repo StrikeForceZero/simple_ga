@@ -45,18 +45,22 @@ pub struct ApplyMutationOptions<Actions> {
     pub clone_on_mutation: bool,
 }
 
-pub trait ApplyMutation {
+pub trait ApplyMutation<Data>
+where
+    Data: Default,
+{
     type Subject: GaSubject;
-    fn apply(&self, context: &GaContext, subject: &Self::Subject) -> Self::Subject;
+    fn apply(&self, context: &GaContext<Data>, subject: &Self::Subject) -> Self::Subject;
     fn fitness(subject: &Self::Subject) -> Fitness;
 }
 
 pub fn apply_mutations<
     Subject,
-    Mutator: ApplyMutation<Subject = Subject>,
+    Mutator: ApplyMutation<Data, Subject = Subject>,
     Actions: SampleSelf<Output = Vec<Mutator>>,
+    Data: Default,
 >(
-    context: &GaContext,
+    context: &GaContext<Data>,
     population: &mut Population<Subject>,
     options: &ApplyMutationOptions<Actions>,
 ) {
@@ -80,14 +84,20 @@ pub fn apply_mutations<
     population.subjects.extend(appended_subjects);
 }
 
-impl<Mutator, Subject, MutatorActions> GaAction for GenericMutator<Mutator, Subject, MutatorActions>
+impl<Mutator, Subject, MutatorActions, Data> GaAction<Data>
+    for GenericMutator<Mutator, Subject, MutatorActions>
 where
-    Mutator: ApplyMutation<Subject = Subject>,
+    Mutator: ApplyMutation<Data, Subject = Subject>,
     MutatorActions: SampleSelf<Output = Vec<Mutator>>,
+    Data: Default,
 {
     type Subject = Subject;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        context: &GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    ) {
         apply_mutations(context, population, &self.options);
     }
 }

@@ -23,15 +23,22 @@ impl<Subject> Default for GaIterOptions<Subject> {
     }
 }
 
-pub struct GaIterState<Subject> {
-    pub(crate) context: GaContext,
+#[derive(Default)]
+pub struct GaIterState<Subject, Data>
+where
+    Data: Default,
+{
+    pub(crate) context: GaContext<Data>,
     pub(crate) current_fitness: Option<Fitness>,
     pub(crate) reverse_mode_enabled: Option<bool>,
     pub population: Population<Subject>,
 }
 
-impl<Subject> GaIterState<Subject> {
-    pub fn new(context: GaContext, population: Population<Subject>) -> Self {
+impl<Subject, Data> GaIterState<Subject, Data>
+where
+    Data: Default,
+{
+    pub fn new(context: GaContext<Data>, population: Population<Subject>) -> Self {
         Self {
             population,
             context,
@@ -39,12 +46,12 @@ impl<Subject> GaIterState<Subject> {
             reverse_mode_enabled: None,
         }
     }
-    pub fn context(&self) -> &GaContext {
+    pub fn context(&self) -> &GaContext<Data> {
         &self.context
     }
-    pub(crate) fn get_or_determine_reverse_mode_from_options<Actions: GaAction>(
+    pub(crate) fn get_or_determine_reverse_mode_from_options<Actions: GaAction<Data>>(
         &self,
-        options: &GeneticAlgorithmOptions<Actions>,
+        options: &GeneticAlgorithmOptions<Actions, Data>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -52,9 +59,9 @@ impl<Subject> GaIterState<Subject> {
             options.initial_fitness() < options.target_fitness()
         }
     }
-    pub(crate) fn get_or_init_reverse_mode_enabled<Actions: GaAction>(
+    pub(crate) fn get_or_init_reverse_mode_enabled<Actions: GaAction<Data>>(
         &mut self,
-        options: &GeneticAlgorithmOptions<Actions>,
+        options: &GeneticAlgorithmOptions<Actions, Data>,
     ) -> bool {
         if let Some(reverse_mode_enabled) = self.reverse_mode_enabled {
             reverse_mode_enabled
@@ -69,7 +76,11 @@ impl<Subject> GaIterState<Subject> {
     }
 }
 
-impl<Subject: Debug> Debug for GaIterState<Subject> {
+impl<Subject, Data> Debug for GaIterState<Subject, Data>
+where
+    Subject: Debug,
+    Data: Debug + Default,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GaIterState")
             .field("context", &self.context)
@@ -80,22 +91,27 @@ impl<Subject: Debug> Debug for GaIterState<Subject> {
     }
 }
 
-pub struct GaIterator<Subject, Actions>
+pub struct GaIterator<Subject, Actions, Data>
 where
-    Actions: GaAction<Subject = Subject>,
+    Actions: GaAction<Data, Subject = Subject>,
+    Data: Default,
 {
-    options: GeneticAlgorithmOptions<Actions>,
-    state: GaIterState<Subject>,
+    options: GeneticAlgorithmOptions<Actions, Data>,
+    state: GaIterState<Subject, Data>,
     is_reverse_mode: bool,
     ga_iter_options: GaIterOptions<Subject>,
 }
 
-impl<Subject, Actions> GaIterator<Subject, Actions>
+impl<Subject, Actions, Data> GaIterator<Subject, Actions, Data>
 where
     Subject: GaSubject + Fit<Fitness> + Hash + PartialEq + Eq,
-    Actions: GaAction<Subject = Subject>,
+    Actions: GaAction<Data, Subject = Subject>,
+    Data: Default,
 {
-    pub fn new(options: GeneticAlgorithmOptions<Actions>, mut state: GaIterState<Subject>) -> Self {
+    pub fn new(
+        options: GeneticAlgorithmOptions<Actions, Data>,
+        mut state: GaIterState<Subject, Data>,
+    ) -> Self {
         Self {
             ga_iter_options: GaIterOptions::default(),
             is_reverse_mode: state.get_or_init_reverse_mode_enabled(&options),
@@ -105,8 +121,8 @@ where
     }
 
     pub fn new_with_options(
-        options: GeneticAlgorithmOptions<Actions>,
-        state: GaIterState<Subject>,
+        options: GeneticAlgorithmOptions<Actions, Data>,
+        state: GaIterState<Subject, Data>,
         ga_iter_options: GaIterOptions<Subject>,
     ) -> Self {
         let mut iter = Self::new(options, state);
@@ -114,11 +130,11 @@ where
         iter
     }
 
-    pub fn state(&self) -> &GaIterState<Subject> {
+    pub fn state(&self) -> &GaIterState<Subject, Data> {
         &self.state
     }
 
-    pub fn state_mut(&mut self) -> &mut GaIterState<Subject> {
+    pub fn state_mut(&mut self) -> &mut GaIterState<Subject, Data> {
         &mut self.state
     }
 
@@ -140,7 +156,7 @@ where
     }
 
     pub fn next_generation(&mut self) -> Option<Fitness> {
-        self.state.context.generation += 1;
+        self.state.context.increment_generation();
         let generation_ix = self.state.context.generation;
         let target_fitness = self.options.target_fitness();
         let current_fitness = self.state.current_fitness;

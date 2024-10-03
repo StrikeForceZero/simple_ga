@@ -29,13 +29,18 @@ impl<T, P> PruneAction<T, P> {
     }
 }
 
-impl<Subject, P> GaAction for PruneAction<Subject, P>
+impl<Subject, P, Data> GaAction<Data> for PruneAction<Subject, P>
 where
     P: PruneOther<Vec<FitnessWrapped<Subject>>>,
+    Data: Default,
 {
     type Subject = Subject;
 
-    fn perform_action(&self, _context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        _context: &GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    ) {
         self.action.prune(&mut population.subjects);
     }
 }

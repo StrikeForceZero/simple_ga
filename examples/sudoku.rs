@@ -388,10 +388,10 @@ enum MutatorFn {
     RandomOverwrite,
 }
 
-impl ApplyMutation for MutatorFn {
+impl ApplyMutation<EmptyData> for MutatorFn {
     type Subject = WrappedBoard;
 
-    fn apply(&self, context: &GaContext, subject: &Self::Subject) -> Self::Subject {
+    fn apply(&self, context: &GaContext<EmptyData>, subject: &Self::Subject) -> Self::Subject {
         let rng = &mut rng::thread_rng();
         let mut subject = subject.board.clone();
         fn random_cell(
@@ -426,7 +426,7 @@ impl ApplyMutation for MutatorFn {
                 }
                 Self::RandomFill => {
                     let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell == 0) else {
-                        return WrappedBoard::create_mutation(subject, context.generation);
+                        return WrappedBoard::create_mutation(subject, context.generation());
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
@@ -437,7 +437,7 @@ impl ApplyMutation for MutatorFn {
                 }
                 Self::RandomOverwrite => {
                     let Some((row, col, _)) = random_cell(rng, &subject, |cell| cell > 0) else {
-                        return WrappedBoard::create_mutation(subject, context.generation);
+                        return WrappedBoard::create_mutation(subject, context.generation());
                     };
                     let Some(random_cell) = subject.0.get_mut(row).and_then(|row| row.get_mut(col))
                     else {
@@ -447,7 +447,7 @@ impl ApplyMutation for MutatorFn {
                     subject
                 }
             },
-            context.generation,
+            context.generation(),
         )
     }
 
@@ -461,12 +461,12 @@ enum ReproductionFn {
     RandomMix,
 }
 
-impl ApplyReproduction for ReproductionFn {
+impl ApplyReproduction<EmptyData> for ReproductionFn {
     type Subject = WrappedBoard;
 
     fn apply(
         &self,
-        context: &GaContext,
+        context: &GaContext<EmptyData>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>> {
@@ -495,8 +495,8 @@ impl ApplyReproduction for ReproductionFn {
                     new_b[row_ix] = b;
                 }
                 Some(ReproductionResult::Double(
-                    WrappedBoard::create_reproduction(Board(new_a), context.generation),
-                    WrappedBoard::create_reproduction(Board(new_b), context.generation),
+                    WrappedBoard::create_reproduction(Board(new_a), context.generation()),
+                    WrappedBoard::create_reproduction(Board(new_b), context.generation()),
                 ))
             }
         }
@@ -506,6 +506,9 @@ impl ApplyReproduction for ReproductionFn {
         subject.measure()
     }
 }
+
+#[derive(Debug, Clone, Default)]
+struct EmptyData;
 
 fn main() {
     let population_size = 50;
@@ -521,29 +524,31 @@ fn main() {
         );
     }
 
-    let create_subject_fn: CreateSubjectFnArc<WrappedBoard> = Arc::new(|ga_context: &GaContext| {
-        let mut wrapped_board = WrappedBoard::create_spawn(Board::default(), ga_context.generation);
-        let board = &mut wrapped_board.board.0;
-        let rng = &mut rng::thread_rng();
-        if rng.gen_bool(0.1) {
-            for row in board.iter_mut() {
-                for col in row.iter_mut() {
-                    *col = rng.gen_range(1..=9);
+    let create_subject_fn: CreateSubjectFnArc<WrappedBoard, EmptyData> =
+        Arc::new(|ga_context: &GaContext<EmptyData>| {
+            let mut wrapped_board =
+                WrappedBoard::create_spawn(Board::default(), ga_context.generation());
+            let board = &mut wrapped_board.board.0;
+            let rng = &mut rng::thread_rng();
+            if rng.gen_bool(0.1) {
+                for row in board.iter_mut() {
+                    for col in row.iter_mut() {
+                        *col = rng.gen_range(1..=9);
+                    }
+                }
+            } else if rng.gen_bool(0.75) {
+                const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                for row in board.iter_mut() {
+                    *row = FULL;
+                    if rng.gen_bool(0.5) {
+                        row.rotate_left(rng.gen_range(0..9));
+                    } else {
+                        row.rotate_left(rng.gen_range(0..9));
+                    }
                 }
             }
-        } else if rng.gen_bool(0.75) {
-            const FULL: BoardLikeGroup<u8> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            for row in board.iter_mut() {
-                *row = FULL;
-                if rng.gen_bool(0.5) {
-                    row.rotate_left(rng.gen_range(0..9));
-                } else {
-                    row.rotate_left(rng.gen_range(0..9));
-                }
-            }
-        }
-        wrapped_board
-    });
+            wrapped_board
+        });
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: INITIAL_FITNESS..target_fitness,
@@ -573,16 +578,17 @@ fn main() {
             dedupe: DedupeAction::<_, DefaultDedupe<_>>::default(),
             inflate: InflateUntilFull(create_subject_fn.clone()),
         },
+        initial_data: EmptyData,
     };
 
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
         before_each_generation: Some(|ga_iter_state| {
-            if ga_iter_state.context().generation == 0 {
+            if ga_iter_state.context().generation() == 0 {
                 return None;
             }
-            if ga_iter_state.context().generation % 1000000 == 0 {
-                debug!("generation: {}", ga_iter_state.context().generation);
+            if ga_iter_state.context().generation() % 1000000 == 0 {
+                debug!("generation: {}", ga_iter_state.context().generation());
             }
             None
         }),

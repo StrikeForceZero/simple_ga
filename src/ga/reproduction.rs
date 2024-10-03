@@ -64,11 +64,14 @@ pub enum ReproductionResult<T> {
     Quad(T, T, T, T),
 }
 
-pub trait ApplyReproduction {
+pub trait ApplyReproduction<Data>
+where
+    Data: Default,
+{
     type Subject: GaSubject + Hash + PartialEq + Eq;
     fn apply(
         &self,
-        context: &GaContext,
+        context: &GaContext<Data>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>>;
@@ -77,11 +80,12 @@ pub trait ApplyReproduction {
 
 pub fn apply_reproductions<
     Subject,
-    Reproducer: ApplyReproduction<Subject = Subject>,
+    Reproducer: ApplyReproduction<Data, Subject = Subject>,
     Selector: for<'a> SelectOther<&'a FitnessWrapped<Subject>, Output = Vec<&'a FitnessWrapped<Subject>>>,
     Actions: SampleSelf<Output = Vec<Reproducer>>,
+    Data: Default,
 >(
-    context: &GaContext,
+    context: &GaContext<Data>,
     population: &mut Population<Subject>,
     options: &ApplyReproductionOptions<Actions, Selector>,
 ) {
@@ -114,19 +118,24 @@ pub fn apply_reproductions<
     population.subjects.extend(appended_subjects);
 }
 
-impl<Reproducer, Selector, Subject, ReproducerActions> GaAction
+impl<Reproducer, Selector, Subject, ReproducerActions, Data> GaAction<Data>
     for GenericReproducer<Reproducer, Selector, Subject, ReproducerActions>
 where
-    Reproducer: ApplyReproduction<Subject = Subject>,
+    Reproducer: ApplyReproduction<Data, Subject = Subject>,
     Selector: for<'a> SelectOther<
         &'a FitnessWrapped<Reproducer::Subject>,
         Output = Vec<&'a FitnessWrapped<Subject>>,
     >,
     ReproducerActions: SampleSelf<Output = Vec<Reproducer>>,
+    Data: Default,
 {
     type Subject = Subject;
 
-    fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>) {
+    fn perform_action(
+        &self,
+        context: &GaContext<Data>,
+        population: &mut Population<Self::Subject>,
+    ) {
         apply_reproductions(context, population, &self.options);
     }
 }

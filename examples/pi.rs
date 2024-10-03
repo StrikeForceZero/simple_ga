@@ -101,10 +101,10 @@ enum MutatorFns {
 
 impl GaSubject for Subject {}
 
-impl ApplyMutation for MutatorFns {
+impl ApplyMutation<EmptyData> for MutatorFns {
     type Subject = Subject;
 
-    fn apply(&self, _context: &GaContext, subject: &Self::Subject) -> Self::Subject {
+    fn apply(&self, _context: &GaContext<EmptyData>, subject: &Self::Subject) -> Self::Subject {
         let subject_f64 = subject.as_f64();
         let rng = &mut rng::thread_rng();
         let mutated_result = match self {
@@ -139,12 +139,12 @@ enum ReproductionFns {
     ZipDecimal,
 }
 
-impl ApplyReproduction for ReproductionFns {
+impl ApplyReproduction<EmptyData> for ReproductionFns {
     type Subject = Subject;
 
     fn apply(
         &self,
-        _context: &GaContext,
+        _context: &GaContext<EmptyData>,
         subject_a: &Self::Subject,
         subject_b: &Self::Subject,
     ) -> Option<ReproductionResult<Self::Subject>> {
@@ -226,6 +226,9 @@ fn random_f64(rng: &mut impl Rng) -> f64 {
     rng.gen::<f64>()
 }
 
+#[derive(Debug, Clone, Default)]
+struct EmptyData;
+
 fn main() {
     let population_size = 50000;
     simple_ga_internal_lib::tracing::init_tracing();
@@ -237,8 +240,10 @@ fn main() {
         println!("best: {subject} ({fitness})");
     }
 
-    let create_subject_fn: CreateSubjectFnArc<Subject> =
-        Arc::new(|_context: &GaContext| -> Subject { random_f64(&mut rng::thread_rng()).into() });
+    let create_subject_fn: CreateSubjectFnArc<Subject, EmptyData> =
+        Arc::new(|_context: &GaContext<EmptyData>| -> Subject {
+            random_f64(&mut rng::thread_rng()).into()
+        });
 
     let ga_options = GeneticAlgorithmOptions {
         fitness_initial_to_target_range: 0f64..target_fitness,
@@ -276,16 +281,17 @@ fn main() {
             // TODO: fix default
             // ..Default::default()
         },
+        initial_data: EmptyData,
     };
 
     let ga_runner_options = GaRunnerOptions {
         debug_print: Some(debug_print),
         before_each_generation: Some(|ga_iter_state| {
-            if ga_iter_state.context().generation == 0 {
+            if ga_iter_state.context().generation() == 0 {
                 return None;
             }
-            if ga_iter_state.context().generation % 1000000 == 0 {
-                debug!("generation: {}", ga_iter_state.context().generation);
+            if ga_iter_state.context().generation() % 1000000 == 0 {
+                debug!("generation: {}", ga_iter_state.context().generation());
             }
             None
         }),
