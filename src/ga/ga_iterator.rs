@@ -140,7 +140,7 @@ where
     }
 
     pub fn next_generation(&mut self) -> Option<Fitness> {
-        self.state.context.generation += 1;
+        self.state.context.increment_generation();
         let generation_ix = self.state.context.generation;
         let target_fitness = self.options.target_fitness();
         let current_fitness = self.state.current_fitness;

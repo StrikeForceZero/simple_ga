@@ -173,6 +173,12 @@ pub struct GaContext {
     pub generation: usize,
 }
 
+impl GaContext {
+    pub(crate) fn increment_generation(&mut self) {
+        self.generation += 1;
+    }
+}
+
 pub trait GaAction {
     type Subject;
     fn perform_action(&self, context: &GaContext, population: &mut Population<Self::Subject>);
