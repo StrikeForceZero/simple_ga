@@ -82,12 +82,12 @@ mod tests {
 
     #[test]
     fn create_subject_fn_pointer() {
-        fn create_subject(_: &GaContext) -> TestSubject {
+        fn create_subject(_: &GaContext, _data: &mut ()) -> TestSubject {
             TestSubject
         }
-        let inflate = InflateUntilFull(create_subject);
+        let inflate = InflateUntilFull::new(create_subject);
         let mut population = Population::empty(100);
-        inflate.perform_action(&GaContext::default(), &mut population);
+        inflate.perform_action(&GaContext::default(), &mut population, &mut ());
         assert_eq!(population.subjects.len(), population.pool_size);
     }
 }
