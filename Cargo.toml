@@ -14,6 +14,9 @@ parallel = ["dep:rayon", "dep:dashmap"]
 simple_ga_internal_lib = { path = "crates/simple_ga_internal_lib" }
 rstest = "0.19"
 lazy_static = "1.4.0"
+smallvec = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
 
 [dependencies]
 rand = "0.8"
@@ -33,3 +36,6 @@ name = "sudoku"
 
 [[example]]
 name = "traveling_sales_person"
+
+[[example]]
+name = "keystone_party"
