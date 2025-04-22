@@ -42,6 +42,9 @@ impl<Subject> GaIterState<Subject> {
     pub fn context(&self) -> &GaContext {
         &self.context
     }
+    pub fn current_fitness(&self) -> &Option<Fitness> {
+        &self.current_fitness
+    }
     pub(crate) fn get_or_determine_reverse_mode_from_options<Actions>(
         &self,
         options: &GeneticAlgorithmOptions<Actions>,
