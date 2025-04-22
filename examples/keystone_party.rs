@@ -719,18 +719,14 @@ fn main() {
         ),
         after_each_generation: Some(
             |ga_iter_state: &mut simple_ga::ga::ga_iterator::GaIterState<Team<Id>, Data>| {
-                let Some(best) = ga_iter_state.population.subjects.first() else {
-                    unreachable!()
+                let current_generation = ga_iter_state.context().generation;
+                let &Some(best_fitness) = ga_iter_state.current_fitness() else {
+                    unreachable!();
                 };
-                if best.fitness() > ga_iter_state.data.best_fitness.unwrap_or(Fitness::MIN) {
-                    debug!(
-                        "new best: {}, generation: {}",
-                        best.fitness(),
-                        ga_iter_state.context().generation
-                    );
-                    ga_iter_state.data.best_fitness = Some(best.fitness());
-                    ga_iter_state.data.last_fitness_generation =
-                        Some(ga_iter_state.context().generation);
+                if best_fitness > ga_iter_state.data.best_fitness.unwrap_or(Fitness::MIN) {
+                    debug!("new best: {best_fitness}, generation: {current_generation}",);
+                    ga_iter_state.data.best_fitness = Some(best_fitness);
+                    ga_iter_state.data.last_fitness_generation = Some(current_generation);
                 }
 
                 let last_fitness_generation = ga_iter_state
@@ -739,12 +735,11 @@ fn main() {
                     .unwrap_or_default();
 
                 let last_fitness_generation_exceed_threshold =
-                    ga_iter_state.context().generation - last_fitness_generation > 200;
+                    current_generation - last_fitness_generation > 200;
 
                 if last_fitness_generation_exceed_threshold {
                     debug!(
-                        "200 generations without improvement, terminating - generation: {}",
-                        ga_iter_state.context().generation
+                        "200 generations without improvement, terminating - generation: {current_generation}"
                     );
                     Some(GaRunnerCustomForEachGenerationResult::Terminate)
                 } else {
