@@ -4,7 +4,7 @@ use serde::Serialize;
 use simple_ga::ga::action::DefaultActions;
 use simple_ga::ga::dedupe::{DedupeAction, DefaultDedupe, EmptyDedupe};
 use simple_ga::ga::fitness::{Fit, Fitness};
-use simple_ga::ga::ga_runner::{ga_runner, GaRunnerOptions};
+use simple_ga::ga::ga_runner::{ga_runner, GaRunnerCustomForEachGenerationResult, GaRunnerOptions};
 use simple_ga::ga::inflate::InflateUntilFull;
 use simple_ga::ga::mutation::{ApplyMutation, ApplyMutationOptions, GenericMutator};
 use simple_ga::ga::prune::{PruneAction, PruneExtraBackSkipFirst};
@@ -426,7 +426,13 @@ impl<Id> GaSubject for Team<Id> where Id: Debug + Clone + PartialEq + Eq + Hash 
 
 fn main() {
     type Id = i32;
-    type Data = Vec<Participant<Id>>;
+
+    #[derive(Debug, Default, Clone, PartialEq)]
+    struct Data {
+        best_fitness: Option<Fitness>,
+        last_fitness_generation: Option<usize>,
+        participants: Vec<Participant<Id>>,
+    }
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
     enum MutatorFns {
@@ -594,35 +600,38 @@ fn main() {
     }
     let mut ids: Range<Id> = 1..99;
     let ids = &mut ids;
-    let mut data: Vec<Participant<Id>> = vec![
-        p(ids).prefer_tank(),
-        p(ids).prefer_damage(),
-        p(ids).prefer_healer(),
-        p(ids).prefer_tank().fallback_damage(),
-        p(ids).prefer_tank().fallback_healer(),
-        p(ids).prefer_damage().fallback_tank(),
-        p(ids).prefer_damage().fallback_healer(),
-        p(ids).willing_tank().willing_damage().willing_healer(),
-        p(ids).willing_tank().willing_damage().willing_healer(),
-        p(ids).prefer_tank().willing_damage().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_damage().willing_tank().willing_healer(),
-        p(ids).prefer_healer().willing_tank().willing_damage(),
-    ];
+    let mut data = Data {
+        participants: vec![
+            p(ids).prefer_tank(),
+            p(ids).prefer_damage(),
+            p(ids).prefer_healer(),
+            p(ids).prefer_tank().fallback_damage(),
+            p(ids).prefer_tank().fallback_healer(),
+            p(ids).prefer_damage().fallback_tank(),
+            p(ids).prefer_damage().fallback_healer(),
+            p(ids).willing_tank().willing_damage().willing_healer(),
+            p(ids).willing_tank().willing_damage().willing_healer(),
+            p(ids).prefer_tank().willing_damage().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_damage().willing_tank().willing_healer(),
+            p(ids).prefer_healer().willing_tank().willing_damage(),
+        ],
+        ..Default::default()
+    };
 
     fn create_subject_fn(_context: &GaContext, data: &mut Data) -> Team<Id> {
         let mut team = Team::default();
         let mut rng = thread_rng();
-        for &p in data.iter() {
+        for &p in data.participants.iter() {
             // skip anyone without at least one preference
             if p.pref.highest_pref().is_none() {
                 continue;
@@ -706,6 +715,41 @@ fn main() {
                     debug!("generation: {}", ga_iter_state.context().generation);
                 }
                 None
+            },
+        ),
+        after_each_generation: Some(
+            |ga_iter_state: &mut simple_ga::ga::ga_iterator::GaIterState<Team<Id>, Data>| {
+                let Some(best) = ga_iter_state.population.subjects.first() else {
+                    unreachable!()
+                };
+                if best.fitness() > ga_iter_state.data.best_fitness.unwrap_or(Fitness::MIN) {
+                    debug!(
+                        "new best: {}, generation: {}",
+                        best.fitness(),
+                        ga_iter_state.context().generation
+                    );
+                    ga_iter_state.data.best_fitness = Some(best.fitness());
+                    ga_iter_state.data.last_fitness_generation =
+                        Some(ga_iter_state.context().generation);
+                }
+
+                let last_fitness_generation = ga_iter_state
+                    .data
+                    .last_fitness_generation
+                    .unwrap_or_default();
+
+                let last_fitness_generation_exceed_threshold =
+                    ga_iter_state.context().generation - last_fitness_generation > 200;
+
+                if last_fitness_generation_exceed_threshold {
+                    debug!(
+                        "200 generations without improvement, terminating - generation: {}",
+                        ga_iter_state.context().generation
+                    );
+                    Some(GaRunnerCustomForEachGenerationResult::Terminate)
+                } else {
+                    None
+                }
             },
         ),
         ..Default::default()
